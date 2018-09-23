@@ -80,7 +80,7 @@ def loadDataExcel(dataToPlot, mainSheet = 'Samples', dataSheet = 'ZrUPb', ID_col
     obj3 = []
     obj4 = []
     for i in range(len(dataToPlot)):
-        dfs = pd.read_excel(dataToPlot[i],sheetname=None)
+        dfs = pd.read_excel(dataToPlot[i],sheet_name=None)
         main_df = None
         main_df = dfs[mainSheet]
         samples_df = main_df.copy()
@@ -96,7 +96,7 @@ def loadDataExcel(dataToPlot, mainSheet = 'Samples', dataSheet = 'ZrUPb', ID_col
                         main_df[colname] = (np.nan*np.empty(shape=(len(main_df),1))).tolist()
                         #main_df[colname] = (np.nan*np.ones(main_df.shape)).tolist()
                         main_df[colname] = main_df[colname].astype(np.ndarray)
-                    main_df.set_value(sample_ind,colname,active_UPb_data[colname].values)
+                    main_df.at[sample_ind,colname] = active_UPb_data[colname].values
     
         # Make a copy of the dataset and set the sample ID as index
         main_byid_df = main_df.copy()
@@ -105,10 +105,10 @@ def loadDataExcel(dataToPlot, mainSheet = 'Samples', dataSheet = 'ZrUPb', ID_col
         obj2.append(main_byid_df)
         obj3.append(samples_df)
         obj4.append(analyses_df)
-    main_df = pd.concat(obj1)
-    main_byid_df = pd.concat(obj2)
-    samples_df = pd.concat(obj3)
-    analyses_df = pd.concat(obj4)
+    main_df = pd.concat(obj1, sort=False)
+    main_byid_df = pd.concat(obj2, sort=False)
+    samples_df = pd.concat(obj3, sort=False)
+    analyses_df = pd.concat(obj4, sort=False)
     
     return main_df, main_byid_df, samples_df, analyses_df
 
@@ -520,7 +520,7 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
             if plotHist:
                 axHist = axs[c+i,1].twinx() # to allow the histogram to plot on a different scale
                 bin_array = np.arange(x1, x2+xdif, b)
-                axHist.hist(ages[i], bins=bin_array, color='black', fill=None, alpha=1, histtype='bar', normed=False)
+                axHist.hist(ages[i], bins=bin_array, color='black', fill=None, alpha=1, histtype='bar', density=False)
                 axHist.set_xlim([x1, x2]) # Use this code to set the x-axis scale
                 if normPlots:
                     histMax = 0
@@ -1076,7 +1076,7 @@ def plotDouble(sampleList, main_byid_df, ages, errors, numGrains, labels, variab
         if plotHist:
             axHist = axs[c+t,0].twinx() # to allow the histogram to plot on a different scale
             bin_array = np.arange(x1, x2+xdif, b)
-            axHist.hist(ages[i], bins=bin_array, color='black', fill=None, alpha=1, histtype='bar', normed=False)
+            axHist.hist(ages[i], bins=bin_array, color='black', fill=None, alpha=1, histtype='bar', density=False)
             axHist.set_xlim([x1, x2]) # Use this code to set the x-axis scale
             if normPlots:
                 histMax = 0
@@ -1861,7 +1861,7 @@ def plotDoubleDating(main_byid_df, sampleList, x1, x2, y1, y2, plotKDE, colorKDE
         if plotHist:
             bin_array = np.arange(x1, x2+xdif, b)
             axsHist = axs[1,0].twinx()
-            axsHist.hist([xF], bins=bin_array, color='black', fill=None, alpha=1, histtype='bar', normed=False)
+            axsHist.hist([xF], bins=bin_array, color='black', fill=None, alpha=1, histtype='bar', density=False)
             axsHist.set_xlim(x1, x2)
             axsHist.set_xlabel('Zircon U-Pb Age (Ma)')
         if plotPDP:
@@ -1904,7 +1904,7 @@ def plotDoubleDating(main_byid_df, sampleList, x1, x2, y1, y2, plotKDE, colorKDE
             axsHist = axs[0,1].twiny()
             axsHist.invert_xaxis()
             bin_array = np.arange(x1, x2+xdif, b)
-            axsHist.hist(yF, orientation='horizontal', bins=bin_array, color='black', fill=None, alpha=1, histtype='bar', normed=False)
+            axsHist.hist(yF, orientation='horizontal', bins=bin_array, color='black', fill=None, alpha=1, histtype='bar', density=False)
             axsHist.set_ylim(y1, y2)
             axsHist.set_ylabel('Zircon (U-Th)/He Age (Ma)')
         if plotPDP:
