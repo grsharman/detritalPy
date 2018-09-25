@@ -1184,7 +1184,7 @@ def plotBar(width, height, overlap, main_byid_df, sampleList, ages, numGrains, l
                     hist = hist/len(ages[j])
                     left = 0
                     for k in range(len(hist)): # Loop for each age population category
-                        ax.barh(bottom=y[j],width=hist[k],color=agebinsc[k], left=left, height=overlap)
+                        ax.barh(y=y[j],width=hist[k],color=agebinsc[k], left=left, height=overlap)
                         left += hist[k]
                 ax.set_xlabel('Proportion')
                 ax.set_title(sampleList[i][1]+' age proportions')
@@ -1203,7 +1203,7 @@ def plotBar(width, height, overlap, main_byid_df, sampleList, ages, numGrains, l
                 hist = hist/len(ages[i])
                 left = 0
                 for j in range(len(hist)):
-                    ax.barh(bottom=y[i],width=hist[j],color=agebinsc[j], left=left, height=overlap)
+                    ax.barh(y=y[i],width=hist[j],color=agebinsc[j], left=left, height=overlap)
                     left += hist[j]
             ax.set_xlabel('Proportion')
             ax.set_title('Age proportions')
@@ -1648,11 +1648,11 @@ def MDAtoCSV(sampleList, ages, errors, numGrains, labels, fileName, sortBy, barW
                     # Plot the mean age, 1 sigma error, and 2 sigma error for each grain
                     ax_i.hlines(y = ageErrors[j][0], xmin=barx[j]-barWidth/2, xmax=barx[j]+barWidth/2, color='white', zorder=11)          
                     if (sortBy == 'mean' or sortBy == '1sigma'):
-                        ax_i.bar(left = barx[j], height = height, width=barWidth, bottom = ageErrors[j][0]-ageErrors[j][1], color='black', zorder=10)
-                        ax_i.bar(left = barx[j], height = height*2, width=barWidth, bottom = ageErrors[j][0]-ageErrors[j][1]*2, color='gray', zorder=9)
+                        ax_i.bar(x = barx[j], height = height, width=barWidth, bottom = ageErrors[j][0]-ageErrors[j][1], color='black', zorder=10)
+                        ax_i.bar(x = barx[j], height = height*2, width=barWidth, bottom = ageErrors[j][0]-ageErrors[j][1]*2, color='gray', zorder=9)
                     if sortBy == '2sigma':
-                        ax_i.bar(left = barx[j], height = height/2, width=barWidth, bottom = ageErrors[j][0]-ageErrors[j][1]/2, color='black', zorder=10)
-                        ax_i.bar(left = barx[j], height = height, width=barWidth, bottom = ageErrors[j][0]-ageErrors[j][1], color='gray', zorder=9)                    
+                        ax_i.bar(x = barx[j], height = height/2, width=barWidth, bottom = ageErrors[j][0]-ageErrors[j][1]/2, color='black', zorder=10)
+                        ax_i.bar(x = barx[j], height = height, width=barWidth, bottom = ageErrors[j][0]-ageErrors[j][1], color='gray', zorder=9)                    
                 ax_i.grid(True)
                 xmin, xmax = ax_i.get_xlim()
                 ymin, ymax = ax_i.get_ylim()
@@ -1724,10 +1724,10 @@ def MDS(ages, errors, labels, sampleList, metric, plotWidth, plotHeight, plotPie
                 matrix[i,j] = calcVmax(CDF[i], CDF[j])
             if criteria == 'R2-PDP' or criteria == 'R2-KDE':
                 matrix[i,j] = calcComplR2(CDF[i], CDF[j])     
-    mds = manifold.MDS(random_state=1)
+    mds = manifold.MDS(random_state=1, dissimilarity='precomputed')
     pos = mds.fit(matrix).embedding_
     posStress = mds.fit(matrix).stress_     
-    nmds = manifold.MDS(metric=False, random_state=1)
+    nmds = manifold.MDS(metric=False, random_state=1, dissimilarity='precomputed')
     npos = nmds.fit_transform(matrix, init=pos)
     nposStress = mds.fit(matrix).stress_ 
     if metric:
@@ -2376,7 +2376,7 @@ def KDEcalcAgesLocalAdapt(ages, x1=0, x2=4500, xdif=1, cumulative=False):
     -----
     Requires installation of the adaptivekde library.
     """
-    import adaptivekde as akde
+    import adaptiveKDE as akde
 
     KDE_age = np.arange(0, 4500+xdif, xdif) # Ensures that the KDE is calculated over all of geologic time
     KDE = np.zeros(shape=(len(ages),len(KDE_age)))
@@ -2415,7 +2415,7 @@ def KDEcalcAgesGlobalAdapt(ages, x1=0, x2=4500, xdif=1, cumulative=False):
     -----
     Requires installation of the adaptivekde library.
     """
-    import adaptivekde as akde
+    import adaptiveKDE as akde
 
     KDE_age = np.arange(x1, x2+xdif, xdif)
     KDE = np.zeros(shape=(len(ages),len(KDE_age)))
