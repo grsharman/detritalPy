@@ -112,7 +112,7 @@ def loadDataExcel(dataToPlot, mainSheet = 'Samples', dataSheet = 'ZrUPb', ID_col
     
     return main_df, main_byid_df, samples_df, analyses_df
 
-def plotSampleDist(main_df, ID_col = 'Sample_ID', bestAge = 'BestAge', numBins = 25):
+def plotSampleDist(main_byid_df, ID_col = 'Sample_ID', bestAge = 'BestAge', numBins = 25):
     """
     Plots a histogram displaying the distribution of sample size (number of analyses per sample) within the database.
     
@@ -130,12 +130,14 @@ def plotSampleDist(main_df, ID_col = 'Sample_ID', bestAge = 'BestAge', numBins =
     Notes
     -----
     """        
-    numGrains = np.zeros_like(main_df[ID_col])
-    numSamples = len(main_df[ID_col])
-    for i in range(numSamples):
-        numGrains[i] = len(main_df.ix[i,bestAge])
+    numGrains = np.zeros_like(main_byid_df[ID_col])
+    numSamples = len(main_byid_df[ID_col])
+    c = 0 # Counter variable
+    for sample in main_byid_df[ID_col]:
+        numGrains[c] = len(main_byid_df.loc[sample,bestAge])
+        c += 1
     fig, ax = plt.subplots(1,1)
-    ax.hist(numGrains, numBins)
+    ax.hist(list(numGrains), numBins)
     ax.set_xlabel('Number of analyses')
     ax.set_ylabel('Frequency')
     ax.text(0.7, 0.8, s=("Samples:"+str(numSamples)), horizontalalignment='left',verticalalignment='center',transform=ax.transAxes)
