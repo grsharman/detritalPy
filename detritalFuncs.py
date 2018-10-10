@@ -1869,35 +1869,41 @@ def plotDoubleDating(main_byid_df, sampleList, x1, x2, y1, y2, plotKDE, colorKDE
         if plotPDP:
             xPDP = PDPcalcAges(ages=[xF],errors=[xerrF], xdif=xdif)
             axsPDP = axs[1,0].twinx()
-            axsPDP.plot(xPDP[0],xPDP[1][i], color='black', lw=1)
+            axsPDP.plot(xPDP[0],xPDP[1][0], color='black', lw=1)
             axsPDP.set_xlim(x1, x2)
-            axsPDP.set_ylim(0,np.max(xPDP[1][i])*1.1)
+            axsPDP.set_ylim(0,np.max(xPDP[1][0])*1.1)
             axsPDP.get_yaxis().set_ticks([])
             if colorPDP:
-                axsPDP.fill_between(xPDP[0], xPDP[1][i], alpha = 1, color=colorMe(i))
+                axsPDP.fill_between(xPDP[0], xPDP[1][0], alpha = 1, color=colorMe(i))
             if colorPDPbyAge:
                 nage = len(agebins)-1
                 for j in range(nage):
                     xage1 = agebins[j]
                     xage2 = agebins[j+1] 
-                    PDPpart = xPDP[1][i][int(xage1/xdif):int((xage2+xdif)/xdif)]
+                    PDPpart = xPDP[1][0][int(xage1/xdif):int((xage2+xdif)/xdif)]
                     PDP_agePart = np.arange(xage1, xage1+len(PDPpart), xdif)
                     axsPDP.fill_between(PDP_agePart, 0, PDPpart, alpha = 1, color=agebinsc[j])
         if plotKDE:
-            xKDE = KDEcalcAges_2(ages=x, bw=bw, xdif=xdif)
+            if bw == 'optimizedFixed':
+                xKDE = KDEcalcAgesLocalAdapt(ages=x, xdif=xdif)
+            if bw == 'optimizedVariable':
+                xKDE = KDEcalcAgesGlobalAdapt(ages=x, xdif=xdif)
+            if type(bw) != str:
+                xKDE = KDEcalcAges_2(ages=x, xdif=xdif, bw=bw)
+            #xKDE = KDEcalcAges_2(ages=x, bw=bw, xdif=xdif)
             axsKDE = axs[1,0].twinx()
-            axsKDE.plot(xKDE[0],xKDE[1][i], color='black', lw=1)
+            axsKDE.plot(xKDE[0],xKDE[1][0], color='black', lw=1)
             axsKDE.set_xlim(x1, x2)
-            axsKDE.set_ylim(0,np.max(xKDE[1][i])*1.1)
+            axsKDE.set_ylim(0,np.max(xKDE[1][0])*1.1)
             axsKDE.get_yaxis().set_ticks([])
             if colorKDE:
-                axsKDE.fill_between(xKDE[0], xKDE[1][i], alpha = 1, color=colorMe(i))
+                axsKDE.fill_between(xKDE[0], xKDE[1][0], alpha = 1, color=colorMe(i))
             if colorKDEbyAge:
                 nage = len(agebins)-1
                 for j in range(nage):
                     xage1 = agebins[j]
                     xage2 = agebins[j+1] 
-                    KDEpart = xKDE[1][i][(xage1/xdif):((xage2+xdif)/xdif)]
+                    KDEpart = xKDE[1][0][int(xage1/xdif):int((xage2+xdif)/xdif)]
                     KDE_agePart = np.arange(xage1, xage1+len(KDEpart), xdif)
                     axsKDE.fill_between(KDE_agePart, 0, KDEpart, alpha = 1, color=agebinsc[j])
 
@@ -1912,35 +1918,40 @@ def plotDoubleDating(main_byid_df, sampleList, x1, x2, y1, y2, plotKDE, colorKDE
         if plotPDP:
             yPDP = PDPcalcAges(ages=[yF],errors=[yerrF], xdif=xdif)
             axsPDP = axs[0,1].twiny()
-            axsPDP.plot(yPDP[1][i],yPDP[0], color='black', lw=1)
+            axsPDP.plot(yPDP[1][0],yPDP[0], color='black', lw=1)
             axsPDP.set_ylim(y1, y2)
-            axsPDP.set_xlim(np.max(yPDP[1][i])*1.1,0)
+            axsPDP.set_xlim(np.max(yPDP[1][0])*1.1,0)
             axsPDP.get_xaxis().set_ticks([])
             if colorPDP:
-                axsPDP.fill_betweenx(yPDP[0], 0, yPDP[1][i], alpha = 1, color=colorMe(i))
+                axsPDP.fill_betweenx(yPDP[0], 0, yPDP[1][0], alpha = 1, color=colorMe(i))
             if colorPDPbyAge:
                 nage = len(agebins)-1
                 for j in range(nage):
                     xage1 = agebins[j]
                     xage2 = agebins[j+1] 
-                    PDPpart = yPDP[1][i][int(xage1/xdif):int((xage2+xdif)/xdif)]
+                    PDPpart = yPDP[1][0][int(xage1/xdif):int((xage2+xdif)/xdif)]
                     PDP_agePart = np.arange(xage1, xage1+len(PDPpart), xdif)
                     axsPDP.fill_betweenx(PDP_agePart, 0, PDPpart,  alpha = 1, color=agebinsc[j])
         if plotKDE:
-            yKDE = KDEcalcAges_2(ages=[yF], bw=bw, xdif=xdif)
+            if bw == 'optimizedFixed':
+                yKDE = KDEcalcAgesLocalAdapt(ages=[yF], xdif=xdif)
+            if bw == 'optimizedVariable':
+                yKDE = KDEcalcAgesGlobalAdapt(ages=[yF], xdif=xdif)
+            if type(bw) != str:
+                yKDE = KDEcalcAges_2(ages=[yF], xdif=xdif, bw=bw)            
             axsKDE = axs[0,1].twiny()
-            axsKDE.plot(yKDE[1][i],yKDE[0], color='black', lw=1)
+            axsKDE.plot(yKDE[1][0],yKDE[0], color='black', lw=1)
             axsKDE.set_ylim(y1, y2)
-            axsKDE.set_xlim(np.max(yKDE[1][i])*1.1,0)
+            axsKDE.set_xlim(np.max(yKDE[1][0])*1.1,0)
             axsKDE.get_xaxis().set_ticks([])
             if colorKDE:
-                axsKDE.fill_betweenx(yKDE[0], 0, yKDE[1][i], alpha = 1, color=colorMe(i))
+                axsKDE.fill_betweenx(yKDE[0], 0, yKDE[1][0], alpha = 1, color=colorMe(i))
             if colorKDEbyAge:
                 nage = len(agebins)-1
                 for j in range(nage):
                     xage1 = agebins[j]
                     xage2 = agebins[j+1] 
-                    KDEpart = yKDE[1][i][(xage1/xdif):((xage2+xdif)/xdif)]
+                    KDEpart = yKDE[1][0][int(xage1/xdif):int((xage2+xdif)/xdif)]
                     KDE_agePart = np.arange(xage1, xage1+len(KDEpart), xdif)
                     axsKDE.fill_betweenx(KDE_agePart, 0, KDEpart,  alpha = 1, color=agebinsc[j])
 
