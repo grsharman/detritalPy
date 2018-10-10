@@ -549,11 +549,11 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
 
 def plotAll_2(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, plotCPDP, plotCKDE, plotDKW, normPlots, plotKDE, colorKDE, colorKDEbyAge, plotPDP, colorPDP, colorPDPbyAge, plotColorBar, plotHist, plotLog, plotPIE, x1, x2, b, bw, xdif, agebins, agebinsc, w, c, h, CDFlw=3, KDElw=1, PDPlw=1):
     # Reverse sample order, to make plotting order consistent with plotAll_1()
-    sampleList.reverse()
-    ages.reverse()
-    errors.reverse()
-    numGrains.reverse()
-    labels.reverse()
+    sampleList = sampleList[::-1]
+    ages = ages[::-1]
+    errprs = errors[::-1]
+    numGrains = numGrains[::-1]
+    labels = labels[::-1]
     
     if (plotLog and x1 == 0):
         x1 = 0.1 # Ensures that 0 will not be plotted on a log scale
