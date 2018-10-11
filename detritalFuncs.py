@@ -14,6 +14,7 @@ Created on Sat Feb 18 07:43:18 2017
 
 import numpy as np
 import matplotlib.pyplot as plt
+import pathlib
 
 ###############################################################
 # Functions for loading a dataset and selecting samples 
@@ -1121,7 +1122,8 @@ def ageProportionsCSV(ages, errors, numGrains, labels, agebins, fileName):
     agecategoryp = []
     rowLabels = ['Sample','numGrains']
 
-    with open(fileName, 'w', newline='') as f: #Select the CSV file to save data to , 'wb'
+    pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
+    with open(pathlib.Path("Output/") / fileName, 'w', newline='') as f: #Select the CSV file to save data to , 'wb'
         writer = csv.writer(f)
 
         # Create category names (age ranges)
@@ -1193,7 +1195,8 @@ def plotBar(width, height, overlap, main_byid_df, sampleList, ages, numGrains, l
                 ax.set_yticklabels((sampleList[i][0])) 
                 ax.set_xlim(0.,1.) 
                 if savePlot:
-                    figBar.savefig(('Bar_%s' %sampleList[i][1])+('.pdf'))                        
+                    pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
+                    figBar.savefig(pathlib.Path("Output/") / (('Bar_%s' %sampleList[i][1])+('.pdf')))                      
         else:
             N = len(sampleList) # Number of groups
             figBar, ax = plt.subplots(1, figsize=(2*width,N*(height+1-overlap)))            
@@ -1212,7 +1215,8 @@ def plotBar(width, height, overlap, main_byid_df, sampleList, ages, numGrains, l
             ax.set_yticklabels((labels))             
             ax.set_xlim(0.,1.) 
             if savePlot:
-                figBar.savefig(('BarGroups')+('.pdf'))     
+                pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
+                figBar.savefig(pathlib.Path("Output/") / (('BarGroups')+('.pdf')))    
     else:
         N = len(sampleList) # Number of samples in the list
         figBar, ax = plt.subplots(1, figsize=(2*width,N*height))        
@@ -1231,7 +1235,8 @@ def plotBar(width, height, overlap, main_byid_df, sampleList, ages, numGrains, l
         ax.set_yticklabels((labels)) 
         ax.set_xlim(0.,1.)
         if savePlot:
-            figBar.savefig(('BarSamples')+('.pdf'))    
+            pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
+            figBar.savefig(pathlib.Path("Output/") / (('BarSamples')+('.pdf')))    
     return figBar
 
 def plotFoliumMap(sampleList, main_byid_df, ages, errors, numGrains, plotMapKDE, plotMapPDP, plotCumulative, x2, bw, mapType, exportKML, descrpt):
@@ -1481,7 +1486,8 @@ def plotFoliumMap(sampleList, main_byid_df, ages, errors, numGrains, plotMapKDE,
         feature_group.add_to(m)
         folium.LayerControl().add_to(m)
     if exportKML:
-        kml.save('samples.kml')
+        pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
+        kml.save(pathlib.Path("Output/") / 'samples.kml')
     return m
 
 def MDAtoCSV(sampleList, ages, errors, numGrains, labels, fileName, sortBy, barWidth, plotWidth, plotHeight, ageColors, alpha, makePlot, fillMDACalcs):
@@ -1518,8 +1524,9 @@ def MDAtoCSV(sampleList, ages, errors, numGrains, labels, fileName, sortBy, barW
     """ 
     import csv
     import matplotlib.pyplot as plt
-        
-    with open(fileName, 'w', newline='') as f: #Select the CSV file to save data to
+    
+    pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
+    with open(pathlib.Path("Output/") / fileName, 'w', newline='') as f: #Select the CSV file to save data to
         writer = csv.writer(f)
         writer.writerow(('Sample','N', 'YSG', 'YSG_err1s', 'YC1S WM', 'YC1S WM 1serr', 'YC1S WM MSWD', 'YC1S cluster size', 'YC2S WM', 'YC2S WM 1serr', 'YC2S WM MSWD', 'YC2S cluster size'))
         N = len(sampleList) # Number of samples or groups of samples
@@ -1963,10 +1970,11 @@ def plotDoubleDating(main_byid_df, sampleList, x1, x2, y1, y2, plotKDE, colorKDE
         fig.subplots_adjust(wspace=0)
         fig.subplots_adjust(hspace=0)
         if savePlot:
+            pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
             if type(sampleList[0])==tuple:
-                fig.savefig(('DoubleDating_%s' %sampleList[i][1])+('.pdf'))
+                fig.savefig(('Output/DoubleDating_%s' %sampleList[i][1])+('.pdf'))
             else:
-                fig.savefig(('DoubleDating_%s' %sampleList[i])+('.pdf'))    
+                fig.savefig(('Output/DoubleDating_%s' %sampleList[i])+('.pdf'))    
     return fig
             
 def exportDist(ages, errors, labels, exportType, cumulative, x1, x2, xdif, bw, fileName, normalize):
@@ -2008,8 +2016,9 @@ def exportDist(ages, errors, labels, exportType, cumulative, x1, x2, xdif, bw, f
             dist[i][j] = round(dist[i][j], 5)
         if normalize:
             dist[i] = dist[i]/sum(dist[i])      
-         
-    with open(fileName, 'w', newline='') as f: #Select the CSV file to save data to
+    
+    pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
+    with open(pathlib.Path("Output/") / fileName, 'w', newline='') as f: #Select the CSV file to save data to
         writer = csv.writer(f)
 
         dataRow = ['Age'] # create an empty array    
@@ -2046,7 +2055,8 @@ def agesErrorsCSV(ages, errors, sampleList, fileName):
     agesErrors = [sorted(list(zip(ages[i], errors[i])), key=lambda d: d[0]) for i in range(len(ages))]
     maxNumGrains = max([len(l) for l in agesErrors])
 
-    with open(fileName, 'w', newline='') as f: #Select the CSV file to save data to
+    pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
+    with open(pathlib.Path("Output/") / fileName, 'w', newline='') as f: #Select the CSV file to save data to
         writer = csv.writer(f)
 
         # Write sample name column headings. The extra blank is to take up two columns per sample heading.
@@ -2111,8 +2121,9 @@ def calcComparisonCSV(ages, errors, numGrains, labels, sampleList, calculateSimi
                 dist = KDEcalcAgesGlobalAdapt(ages)[1]
             if type(bw) != str:
                 dist = KDEcalcAges_2(ages, bw=bw)[1]
-
-    with open(fileName, 'w', newline='') as f: #Select the CSV file to save data to , 'wb'
+    
+    pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
+    with open(pathlib.Path("Output/") / fileName, 'w', newline='') as f: #Select the CSV file to save data to , 'wb'
         writer = csv.writer(f)
         labelRow = ['Label','n']
         for i in range(len(sampleList)):
@@ -2215,7 +2226,8 @@ def weightedMeanCSV(ages, errors, numGrains, labels, fileName='weightedMean.csv'
     """    
     import csv
     
-    with open(fileName, 'w', newline='') as f: #Select the CSV file to save data to
+    pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
+    with open(pathlib.Path("Output/") / fileName, 'w', newline='') as f: #Select the CSV file to save data to
         writer = csv.writer(f)
         labelRow = ['Sample','Ngrains','Mean','2s internal error','MSWD']
         writer.writerow(labelRow)
