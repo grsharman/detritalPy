@@ -339,9 +339,13 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
         if (n == 1 and whatToPlot == 'relative'):
             c = c+1 # To avoid an index error when only one sample or sample group is plotted
         fig, axs = plt.subplots(n+c,w, figsize=(w,n+c))
-        axs[0,0] = plt.subplot2grid((n+c,w),(0,0),rowspan=c) # empty subplot
+        if c > 0:
+            axs[0,0] = plt.subplot2grid((n+c,w),(0,0),rowspan=c) # empty subplot
+            axs[0,1] = plt.subplot2grid((n+c,w),(0,1),rowspan=c,colspan=w-1) # panel for CDF plot
+        if c == 0:
+            axs[0,0] = plt.subplot2grid((n,w),(0,0)) # empty subplot
+            axs[0,1] = plt.subplot2grid((n,w),(0,1),colspan=w-1)
         axs[0,0].axis('off') # delete axis from empty subplot
-        axs[0,1] = plt.subplot2grid((n+c,w),(0,1),rowspan=c,colspan=w-1) # panel for CDF plot
         axs[0,1].get_xaxis().set_ticks([])
         axs[0,1].tick_params(direction='out')
         axs[0,1].yaxis.set_ticks_position('left')
@@ -594,7 +598,10 @@ def plotAll_2(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
         if (n == 1 and whatToPlot == 'relative'):
             c = c+1 # To avoid an index error when only one sample or sample group is plotted            
         fig, axs = plt.subplots(h+c,w, figsize=(w+2,h+c))
-        axs[0,0] = plt.subplot2grid((h+c,w),(0,0),rowspan=c,colspan=w) # panel for CDF plot
+        if c > 0:
+            axs[0,0] = plt.subplot2grid((h+c,w),(0,0),rowspan=c,colspan=w) # panel for CDF plot
+        if c == 0:
+            axs[0,0] = plt.subplot2grid((h,w),(0,0),colspan=w)
         axs[0,0].get_xaxis().set_ticks([])
         axs[0,0].tick_params(direction='out')
         axs[0,0].yaxis.set_ticks_position('left')
