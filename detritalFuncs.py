@@ -872,7 +872,7 @@ def plotRimsVsCores(main_byid_df, sampleList, ages, errors, labels, x1, x2, y1, 
 
     return figRimCore
 
-def plotDouble(sampleList, main_byid_df, ages, errors, numGrains, labels, variableName, plotError, variableError, normPlots, plotKDE, colorKDE, colorKDEbyAge, plotPDP, colorPDP, colorPDPbyAge, plotHist, x1, x2, autoScaleY, y1, y2, b, bw, xdif, agebins, agebinsc, w, t, l, plotLog, plotColorBar, plotMovingAverage, windowSize, KDElw=1, PDPlw=1):
+def plotDouble(sampleList, main_byid_df, ages, errors, numGrains, labels, variableName, plotError, variableError, normPlots, plotKDE, colorKDE, colorKDEbyAge, plotPDP, colorPDP, colorPDPbyAge, plotHist, x1, x2, autoScaleY, y1, y2, b, bw, xdif, agebins, agebinsc, w, t, l, plotLog, plotColorBar, plotMovingAverage, windowSize, KDElw=1, PDPlw=1, averageType = 'Mean'):
     """
     Creates a figure where a numeric variable is plotted above detrital age distributions for each sample or sample group. Examples could include the uranium concentration (U_ppm), the thorium to uranium ratio (Th_U), the epsilon hafnium value (eHf), or the concentration of a trace element.
 
@@ -999,16 +999,31 @@ def plotDouble(sampleList, main_byid_df, ages, errors, numGrains, labels, variab
         if plotMovingAverage:
             def isNaN(num):
                 return num != num
-            def movingAverage(interval, windowSize):
-                window = np.ones(int(windowSize))/float(windowSize)
-                return np.convolve(interval, window, 'valid')                      
             zipAgeVariable = list(zip(ages[i], variables[i]))
             zipAgeVariableF = [(x,y) for x, y in zipAgeVariable if not isNaN(y)] # Exclude grains with no data
             zipAgeVariableF.sort(key=lambda d: d[0]) # Sort based on age
             ageSort = np.asarray(zipAgeVariableF)[:,0]
             variableSort = np.asarray(zipAgeVariableF)[:,1]
-            xAvg = movingAverage(ageSort, windowSize)
-            yAvg = movingAverage(variableSort,windowSize)
+
+            if averageType == 'Mean':
+                # Moving average option #1
+                def movingAverage(interval, windowSize):
+                    window = np.ones(int(windowSize))/float(windowSize)
+                    return np.convolve(interval, window, 'same')
+                # Moving average option #2
+                def running_mean(x, N):
+                    cumsum = np.cumsum(np.insert(x, 0, 0)) 
+                    return (cumsum[N:] - cumsum[:-N]) / float(N)
+                xAvg = running_mean(ageSort,windowSize)
+                yAvg = running_mean(variableSort,windowSize)
+            if averageType == 'Median':
+                def RunningMedian(x,N):
+                    idx = np.arange(N) + np.arange(len(x)-N+1)[:,None]
+                    b = [row[row>0] for row in x[idx]]
+                    return list(map(np.median,b))
+                    #return np.array(map(np.median,b))
+                xAvg = RunningMedian(ageSort, windowSize)
+                yAvg = RunningMedian(variableSort,windowSize)
             axs[c,0].plot(xAvg,yAvg,color='darkred',lw=2)
                 
         # Plot the relative distribution (PDP and/or KDE)
@@ -1130,7 +1145,7 @@ def ageProportionsCSV(ages, errors, numGrains, labels, agebins, fileName):
     rowLabels = ['Sample','numGrains']
 
     pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
-    with open(pathlib.Path("Output/") / fileName, 'w', newline='') as f: #Select the CSV file to save data to , 'wb'
+    with open(pathlib.Path('Output/') / fileName, 'w', newline='') as f: #Select the CSV file to save data to , 'wb'
         writer = csv.writer(f)
 
         # Create category names (age ranges)
@@ -1203,7 +1218,7 @@ def plotBar(width, height, overlap, main_byid_df, sampleList, ages, numGrains, l
                 ax.set_xlim(0.,1.) 
                 if savePlot:
                     pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
-                    figBar.savefig(pathlib.Path("Output/") / (('Bar_%s' %sampleList[i][1])+('.pdf')))                      
+                    figBar.savefig(pathlib.Path('Output/') / (('Bar_%s' %sampleList[i][1])+('.pdf')))                      
         else:
             N = len(sampleList) # Number of groups
             figBar, ax = plt.subplots(1, figsize=(2*width,N*(height+1-overlap)))            
@@ -1223,7 +1238,7 @@ def plotBar(width, height, overlap, main_byid_df, sampleList, ages, numGrains, l
             ax.set_xlim(0.,1.) 
             if savePlot:
                 pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
-                figBar.savefig(pathlib.Path("Output/") / (('BarGroups')+('.pdf')))    
+                figBar.savefig(pathlib.Path('Output/') / (('BarGroups')+('.pdf')))    
     else:
         N = len(sampleList) # Number of samples in the list
         figBar, ax = plt.subplots(1, figsize=(2*width,N*height))        
@@ -1243,7 +1258,7 @@ def plotBar(width, height, overlap, main_byid_df, sampleList, ages, numGrains, l
         ax.set_xlim(0.,1.)
         if savePlot:
             pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
-            figBar.savefig(pathlib.Path("Output/") / (('BarSamples')+('.pdf')))    
+            figBar.savefig(pathlib.Path('Output/') / (('BarSamples')+('.pdf')))    
     return figBar
 
 def plotFoliumMap(sampleList, main_byid_df, ages, errors, numGrains, plotMapKDE, plotMapPDP, plotCumulative, x2, bw, mapType, exportKML, descrpt):
@@ -2025,7 +2040,7 @@ def exportDist(ages, errors, labels, exportType, cumulative, x1, x2, xdif, bw, f
             dist[i] = dist[i]/sum(dist[i])      
     
     pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
-    with open(pathlib.Path("Output/") / fileName, 'w', newline='') as f: #Select the CSV file to save data to
+    with open(pathlib.Path('Output/') / fileName, 'w', newline='') as f: #Select the CSV file to save data to
         writer = csv.writer(f)
 
         dataRow = ['Age'] # create an empty array    
