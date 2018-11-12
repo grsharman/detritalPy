@@ -987,6 +987,7 @@ def plotDouble(sampleList, main_byid_df, ages, errors, numGrains, labels, variab
         # Create the upper scatter plot
         # Note that only data points within y1-y2 range will be plotted
         axs[c,0].scatter(ages[i][np.where((variables[i] > y1) & (variables[i] < y2))],variables[i][np.where((variables[i] > y1) & (variables[i] < y2))], color='white', edgecolor='black', marker='s', s=10, zorder=2)
+        axs[c,0].set_xlim(x1, x2)
         axs[c,0].set_ylim(y1, y2)
 
         if plotError:
