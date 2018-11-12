@@ -926,6 +926,10 @@ def plotDouble(sampleList, main_byid_df, ages, errors, numGrains, labels, variab
     -----
     """ 
     variables = sampleToVariable(sampleList, main_byid_df, variableName)
+
+    if type(variableError) is str:
+        variableErrorToPlot = sampleToVariable(sampleList, main_byid_df, variableError)
+
     if (plotLog and x1 == 0):
         x1 = 0.1 # Ensures that 0 will not be plotted on a log scale
 
@@ -973,29 +977,27 @@ def plotDouble(sampleList, main_byid_df, ages, errors, numGrains, labels, variab
         fig.subplots_adjust(hspace=0)
         c = c+t+l
     
-    # Determine the minimum and maximum variable in the dataset
-    if autoScaleY:
-        varMax = -10e99
-        varMin = 10e99
-        for i in range(n):
-            if min(variables[i]) < varMin:
-                varMin = min(variables[i])        
-            if max(variables[i]) > varMax:
-                varMax = max(variables[i])    
-    
     # Plot
     c = 0 # counter variable
     for i in range(n):
-        # Create the upper scatter plot
-        axs[c,0].scatter(ages[i],variables[i], color='white', edgecolor='black', marker='s', s=10, zorder=2)   
-        axs[c,0].set_xlim(x1, x2)
         if autoScaleY:
-            axs[c,0].set_ylim(varMin, varMax)
-        else:
-            axs[c,0].set_ylim(y1, y2)
+            # Determine the minimum and maximum variable in the dataset
+            y1 = min(variables[i])
+            y2 = max(variables[i])
+        # Create the upper scatter plot
+        # Note that only data points within y1-y2 range will be plotted
+        axs[c,0].scatter(ages[i][np.where((variables[i] > y1) & (variables[i] < y2))],variables[i][np.where((variables[i] > y1) & (variables[i] < y2))], color='white', edgecolor='black', marker='s', s=10, zorder=2)
+        axs[c,0].set_ylim(y1, y2)
+
         if plotError:
-            if variableError is not str:
-                axs[c,0].errorbar(ages[i], variables[i], xerr = errors[i], yerr = variables[i]*variableError, fmt='none', color='black', ecolor='black', capthick=2, zorder=1)
+            if type(variableError) is not str:
+                axs[c,0].errorbar(ages[i][np.where((variables[i] > y1) & (variables[i] < y2))], variables[i][np.where((variables[i] > y1) & (variables[i] < y2))],
+                 xerr = errors[i][np.where((variables[i] > y1) & (variables[i] < y2))], yerr = variables[i][np.where((variables[i] > y1) & (variables[i] < y2))]*variableError,
+                  fmt='none', color='black', ecolor='black', capthick=2, zorder=1)
+            else:
+                axs[c,0].errorbar(ages[i][np.where((variables[i] > y1) & (variables[i] < y2))], variables[i][np.where((variables[i] > y1) & (variables[i] < y2))],
+                 xerr = errors[i][np.where((variables[i] > y1) & (variables[i] < y2))], yerr = variableErrorToPlot[i][np.where((variables[i] > y1) & (variables[i] < y2))],
+                  fmt='none', color='black', ecolor='black', capthick=2, zorder=1)
         if plotMovingAverage:
             def isNaN(num):
                 return num != num
