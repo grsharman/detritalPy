@@ -1868,7 +1868,7 @@ def plotDoubleDating(main_byid_df, sampleList, x1, x2, y1, y2, plotKDE, colorKDE
         axs[0,0] = plt.subplot2grid((5,5),(0,0),rowspan=4, colspan=4) # scatterplot subplot
         axs[0,0].xaxis.set_ticks_position('top')
         axs[0,0].plot([x1,x2],[x1,x2], color='black', lw=1)
-        axs[0,0].errorbar(xF, yF, xerrF, yerrF, fmt='s', color='black', ecolor='gray', capthick=2)
+        axs[0,0].errorbar(x = xF, y = yF, xerr = xerrF, yerr = yerrF, fmt='s', color='black', ecolor='gray', capthick=2)
         patch = patches.PathPatch(path, facecolor='lightgray', lw=0)
         axs[0,0].add_patch(patch)
         axs[0,0].xaxis.set_label_position('top') 
