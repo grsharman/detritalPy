@@ -1772,7 +1772,7 @@ def MDAtoCSV(sampleList, ages, errors, numGrains, labels, fileName, sortBy, barW
         if makePlot:
             return figMDA
                 
-def MDS(ages, errors, labels, sampleList, metric, plotWidth, plotHeight, plotPie, pieSize, agebins, agebinsc, criteria='Dmax', bw='optimizedFixed'):
+def MDS(ages, errors, labels, sampleList, metric, plotWidth, plotHeight, plotPie, pieSize, agebins, agebinsc, criteria='Dmax', bw='optimizedFixed', color='Default', main_byid_df=None):
     """
     Create a multi-dimensional scaling (MDS) plot for individual samples or groups of samples.
 
@@ -1793,6 +1793,8 @@ def MDS(ages, errors, labels, sampleList, metric, plotWidth, plotHeight, plotPie
     agebinsc : array of colors that correspond to age bins
     criteria : (optional) similiarty metric used in the MDS calculation. Options: 'Dmax' (default), 'Vmax', 'R2-PDP', 'R2-KDE'
     bw : (optional) KDE bandwidth. Options are 'optimizedFixed', 'optimizedVariable', or a number (bandwidth in Myr)
+    color : (optional) if set to equal a column name in Samples, will color by this category
+    main_byid_df : (optional) required if color <> 'Default'. Set equal to main_byid_df.
 
     Returns
     -------
@@ -1841,6 +1843,16 @@ def MDS(ages, errors, labels, sampleList, metric, plotWidth, plotHeight, plotPie
     else:
         m = npos
         stress = nposStress
+
+    # For coloring by category
+    if color != 'Default':
+        values = list(set(main_byid_df[color]))
+        dicts = {}
+        c = 0
+        for value in values:
+            dicts[value] = colorMe(c)
+            c += 1
+
     for i in range(len(npos)):
         if plotPie:
             hist = np.histogram(ages[i],agebins)[0]
@@ -1852,8 +1864,12 @@ def MDS(ages, errors, labels, sampleList, metric, plotWidth, plotHeight, plotPie
             ax.text(m[i][0]+pieSize/1.5,m[i][1]+pieSize/1.5,labels[i])
             ax.set_aspect('equal')
         else:
-            ax.plot(m[i][0],m[i][1],'o',label=sampleList[i],color=colorMe(i))
-            ax.text(m[i][0]+0.01,m[i][1]+0.01,labels[i])
+            if color == 'Default':
+                ax.plot(m[i][0],m[i][1],'o',label=sampleList[i],color=colorMe(i))
+                ax.text(m[i][0]+0.01,m[i][1]+0.01,labels[i])
+            else:
+                ax.plot(m[i][0],m[i][1],'o',label=sampleList[i],color=dicts[main_byid_df.loc[sampleList[i],color]])
+                ax.text(m[i][0]+0.01,m[i][1]+0.01,labels[i])
 
     return figMDS, stress
 
