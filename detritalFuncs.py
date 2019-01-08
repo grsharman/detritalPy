@@ -6,7 +6,7 @@ Created on Sat Feb 18 07:43:18 2017
 """
 #%%
 
-# Version 1.0
+# Version 1.1
 
 ###############################################################
 # Import required modules
@@ -246,7 +246,8 @@ def sampleToVariable(sampleList, main_byid_df, variableName):
 
 def plotAll(sampleList, ages, errors, numGrains, labels, whatToPlot, separateSubplots, plotCDF, plotCPDP, plotCKDE, plotDKW, normPlots, plotKDE,
  colorKDE, colorKDEbyAge, plotPDP, colorPDP, colorPDPbyAge, plotColorBar, plotHist, plotLog, plotPIE, x1, x2, b, bw, xdif, agebins, agebinsc, 
- w, c, h, plotAgePeaks, agePeakOptions, CDFlw=3, KDElw=1, PDPlw=1, plotDepoAge = False, depoAge = [0], plotAgesOnCDF = False):
+ w, c, h, plotAgePeaks, agePeakOptions, CDFlw=3, KDElw=1, PDPlw=1, plotDepoAge = False, depoAge = [0], plotAgesOnCDF = False, plotHeatMap = False, 
+ heatMapType = None, heatMap = 'inferno_r'):
     """
     Creates a plot of detrital age distributions using a variety of the most common data visualization approaches. The plotting function is divided into a cumulative distribution plot and a relative distribution plot. When both are plotted together, the cumulative distribution is shown on top and the relative distribution for each sample or group of samples is shown below.
 
@@ -302,7 +303,7 @@ def plotAll(sampleList, ages, errors, numGrains, labels, whatToPlot, separateSub
     if separateSubplots:
         fig = plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, plotCPDP, plotCKDE, plotDKW, normPlots, plotKDE, 
             colorKDE, colorKDEbyAge, plotPDP, colorPDP, colorPDPbyAge, plotColorBar, plotHist, plotLog, plotPIE, x1, x2, b, bw, xdif, agebins, 
-            agebinsc, w, c, plotAgePeaks, agePeakOptions, CDFlw, KDElw, PDPlw, plotDepoAge, depoAge, plotAgesOnCDF)
+            agebinsc, w, c, plotAgePeaks, agePeakOptions, CDFlw, KDElw, PDPlw, plotDepoAge, depoAge, plotAgesOnCDF, plotHeatMap, heatMapType, heatMap)
     else:
         fig = plotAll_2(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, plotCPDP, plotCKDE, plotDKW, normPlots, plotKDE, 
             colorKDE, colorKDEbyAge, plotPDP, colorPDP, colorPDPbyAge, plotColorBar, plotHist, plotLog, plotPIE, x1, x2, b, bw, xdif, agebins, 
@@ -311,7 +312,7 @@ def plotAll(sampleList, ages, errors, numGrains, labels, whatToPlot, separateSub
 
 def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, plotCPDP, plotCKDE, plotDKW, normPlots, plotKDE, colorKDE, 
     colorKDEbyAge, plotPDP, colorPDP, colorPDPbyAge, plotColorBar, plotHist, plotLog, plotPIE, x1, x2, b, bw, xdif, agebins, agebinsc, w, c, 
-    plotAgePeaks, agePeakOptions, CDFlw, KDElw, PDPlw, plotDepoAge, depoAge, plotAgesOnCDF):
+    plotAgePeaks, agePeakOptions, CDFlw, KDElw, PDPlw, plotDepoAge, depoAge, plotAgesOnCDF, plotHeatMap, heatMapType, heatMap):
 
 
     if (plotLog and x1 == 0):
@@ -467,43 +468,62 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
     # Plot the relative distribution (PDP and/or KDE)
     if (whatToPlot == 'both' or whatToPlot == 'relative'):
         # Cycle through each sample for normalized plots            
-        if plotKDE:
+        if plotKDE or (plotHeatMap and heatMapType == 'KDE'):
             if bw == 'optimizedFixed':
                 KDE_age, KDE = KDEcalcAgesLocalAdapt(ages=ages, x1=0, x2=4500, xdif=xdif, cumulative=False)
             if bw == 'optimizedVariable':
                 KDE_age, KDE = KDEcalcAgesGlobalAdapt(ages=ages, x1=0, x2=4500, xdif=xdif, cumulative=False)
             if type(bw) != str:
                 KDE_age, KDE = KDEcalcAges_2(ages=ages, x1=0, x2=4500, xdif=xdif, bw=bw, cumulative=False)
-        if plotPDP:
+        if plotPDP or (plotHeatMap and heatMapType == 'PDP'):
             PDP_age, PDP = PDPcalcAges(ages=ages, errors=errors, x1=0, x2=4500, xdif=xdif, cumulative=False)
         if plotAgePeaks:
             if (agePeakOptions[0] == 'KDE' and plotKDE):
                 peakAges, indexes, peakAgesGrains = peakAge(KDE_age, KDE, ages, errors, thres=agePeakOptions[1], minDist=agePeakOptions[2], minPeakSize=agePeakOptions[3])
             if (agePeakOptions[0] == 'PDP' and plotPDP):
                 peakAges, indexes, peakAgesGrains = peakAge(PDP_age, PDP, ages, errors, thres=agePeakOptions[1], minDist=agePeakOptions[2], minPeakSize=agePeakOptions[3])
-        for i in range(len(sampleList)):
 
+        # Calculated if plotting a histogram heat map
+        if plotHeatMap and heatMapType == 'hist':
+            dist = []
+            for i in range(len(sampleList)):
+                dist.append(np.histogram(ages[i], bins = np.arange(x1, x2+xdif, xdif), range=(x1, x2))[0])
+
+        for i in range(len(sampleList)):
+            # Plot the KDE as a heat map
+            if plotHeatMap:
+                axHeat = axs[c+i,1].twinx()
+                axHeat.set_xlim([x1, x2])
+                axHeat.get_yaxis().set_visible(False)
+                if heatMapType == 'KDE':
+                    axHeat.imshow([KDE[i]], aspect='auto', cmap=heatMap, interpolation='none', extent=[0-xdif*0.5, 4500-xdif*0.5, 0, 1])
+                if heatMapType == 'PDP':
+                    axHeat.imshow([PDP[i]], aspect='auto', cmap=heatMap, interpolation='none', extent=[0-xdif*0.5, 4500-xdif*.5, 0, 1])
+                if heatMapType == 'hist':
+                    axHeat.imshow([dist[i]], aspect='auto', cmap=heatMap, interpolation='none', extent=[x1-xdif*0.5, x2-xdif*0.5, 0, 1])
+            
             # KDE plot
             if plotKDE:
+                axKDE = axs[c+i,1].twinx()
                 # Plot depositional age as a vertical line, if selected                
                 if plotDepoAge:
                     if len(depoAge) == 1:
-                        axs[c+i,1].axvline(x=depoAge, color='darkred')
+                        axKDE.axvline(x=depoAge, color='darkred')
                     else:
-                        axs[c+i,1].axvline(x=depoAge[i], color=colorMe(i))
+                        axKDE.axvline(x=depoAge[i], color=colorMe(i))
                 # Plot KDE as a line
-                axs[c+i,1].plot(KDE_age, KDE[i], color='black', lw=KDElw, label=labels[i])
+                axKDE.plot(KDE_age, KDE[i], color='black', lw=KDElw, label=labels[i])
                 # Plot age peaks
                 if (plotAgePeaks and agePeakOptions[0] == 'KDE'):
-                    axs[c+i,1].plot(KDE_age[indexes[i]],KDE[i][indexes[i]], '|', color='black')
+                    axKDE.plot(KDE_age[indexes[i]],KDE[i][indexes[i]], '|', color='black')
                     if agePeakOptions[4]:
                         for j in range(len(peakAges[i])):
                             if (peakAges[i][j]>x1 and peakAges[i][j]<x2): # Only plot the peak age if within plotting range
-                                axs[c+i,1].text(x=KDE_age[indexes[i][j]],y=KDE[i][indexes[i][j]], s=peakAges[i][j], size='x-small')
+                                axKDE.text(x=KDE_age[indexes[i][j]],y=KDE[i][indexes[i][j]], s=peakAges[i][j], size='x-small')
                     exportPeakAge(labels, peakAges, peakAgesGrains)
                 # Fill the KDE      
                 if colorKDE:
-                    axs[c+i,1].fill_between(KDE_age, 0, KDE[i], alpha = 1, color=colorMe(i), lw=0)
+                    axKDE.fill_between(KDE_age, 0, KDE[i], alpha = 1, color=colorMe(i), lw=0)
                 if colorKDEbyAge:
                     nage = len(agebins)-1                    
                     for k in range(nage):
@@ -511,19 +531,19 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                         xage2 = agebins[k+1]
                         KDE_agePart = np.arange(xage1, xage2+xdif, xdif)        
                         KDEpart = KDE[i][int(xage1/xdif):int((xage2+xdif)/xdif)]
-                        axs[c+i,1].fill_between(KDE_agePart, 0, KDEpart, alpha = 1, color=agebinsc[k], lw=0)
-                axs[c+i,1].set_xlim(x1, x2)
-                axs[c+i,1].legend(loc="upper right", prop={'size':8})
+                        axKDE.fill_between(KDE_agePart, 0, KDEpart, alpha = 1, color=agebinsc[k], lw=0)
+                axKDE.set_xlim(x1, x2)
+                axKDE.legend(loc="upper right", prop={'size':8})
                 # Adjust the y-axis scale, depending on normalization
                 if normPlots:
                     kdeMax = 0
                     for k in range(len(sampleList)):
                         if max(KDE[k]) > kdeMax:
                             kdeMax = max(KDE[k])
-                    axs[c+i,1].set_ylim(0, kdeMax)
+                    axKDE.set_ylim(0, kdeMax)
                 else:
-                    axs[c+i,1].set_ylim([0, max(KDE[i])+max(KDE[i])*0.05])                
-                axs[c+i,1].get_yaxis().set_visible(False)
+                    axKDE.set_ylim([0, max(KDE[i])+max(KDE[i])*0.05])                
+                axKDE.get_yaxis().set_visible(False)
     
             # PDP plot
             if plotPDP:
@@ -604,7 +624,6 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
             if plotColorBar:
                 for j in range(nage):
                     axs[c+i,1].axvspan(xmin=agebins[j],xmax=agebins[j+1], color = agebinsc[j])
-
 
     return fig
 
