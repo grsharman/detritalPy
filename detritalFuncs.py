@@ -1791,7 +1791,8 @@ def MDAtoCSV(sampleList, ages, errors, numGrains, labels, fileName, sortBy, barW
         if makePlot:
             return figMDA
                 
-def MDS(ages, errors, labels, sampleList, metric, plotWidth, plotHeight, plotPie, pieSize, agebins, agebinsc, criteria='Dmax', bw='optimizedFixed', color='Default', main_byid_df=None):
+def MDS(ages, errors, labels, sampleList, metric, plotWidth, plotHeight, plotPie, pieSize, agebins, agebinsc, criteria='Dmax', bw='optimizedFixed', color='Default', main_byid_df=None,
+    pieBinStyle = 'Normal'):
     """
     Create a multi-dimensional scaling (MDS) plot for individual samples or groups of samples.
 
@@ -1874,12 +1875,23 @@ def MDS(ages, errors, labels, sampleList, metric, plotWidth, plotHeight, plotPie
 
     for i in range(len(npos)):
         if plotPie:
-            hist = np.histogram(ages[i],agebins)[0]
-            histP = np.cumsum([0]+list(hist/np.sum(hist)))
-            for j in range(len(hist)): # One loop for each bin
-                x = [0] + np.cos(np.linspace(2*math.pi*histP[j], 2*math.pi*histP[j+1], 100)).tolist()
-                y = [0] + np.sin(np.linspace(2*math.pi*histP[j], 2*math.pi*histP[j+1], 100)).tolist()
-                ax.fill(np.array(x)*pieSize+m[i][0],np.array(y)*pieSize+m[i][1],facecolor=agebinsc[j])
+            if pieBinStyle == 'Normal':
+                hist = np.histogram(ages[i],agebins)[0]
+                histP = np.cumsum([0]+list(hist/np.sum(hist)))
+                for j in range(len(hist)): # One loop for each bin
+                    x = [0] + np.cos(np.linspace(2*math.pi*histP[j], 2*math.pi*histP[j+1], 100)).tolist()
+                    y = [0] + np.sin(np.linspace(2*math.pi*histP[j], 2*math.pi*histP[j+1], 100)).tolist()
+                    ax.fill(np.array(x)*pieSize+m[i][0],np.array(y)*pieSize+m[i][1],facecolor=agebinsc[j])
+            if pieBinStyle == 'Alternative':
+                hist = [0]
+                for j in range(len(agebins)):
+                    hist.append(np.histogram(ages[i],agebins[j])[0][0])
+                histP = np.cumsum(list(hist/np.sum(hist)))
+                for j in range(len(hist)-1): # One loop for each bin
+                        x = [0] + np.cos(np.linspace(2*math.pi*histP[j], 2*math.pi*histP[j+1], 100)).tolist()
+                        y = [0] + np.sin(np.linspace(2*math.pi*histP[j], 2*math.pi*histP[j+1], 100)).tolist()
+                        ax.fill(np.array(x)*pieSize+m[i][0],np.array(y)*pieSize+m[i][1],facecolor=agebinsc[j])
+
             ax.text(m[i][0]+pieSize/1.5,m[i][1]+pieSize/1.5,labels[i])
             ax.set_aspect('equal')
         else:
