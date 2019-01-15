@@ -281,7 +281,7 @@ def plotAll(sampleList, ages, errors, numGrains, labels, whatToPlot, separateSub
     b : histogram bin size (Myr)
     bw : KDE bandwidth. Options are 'optimizedFixed', 'optimizedVariable', or a number (bandwidth in Myr)
     xdif : interval (Myr) over which distributions are calculated
-    agebins : array of bin edges (Myr)
+    agebins : array of bin edges in Myr. Format option 1: [age1, age2, age3, etc.]. Format option 2: [[bin1_min, bin1_max],[bin2_min, bin2_max],etc.]
     agebinsc : array of colors that correspond to age bins
     w : width of the plot
     c : height of the plot
@@ -454,8 +454,12 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
         else:
             axs[0,1].set_xlabel('Age (Ma)')
         if plotColorBar:
-            for j in range(nage):
-                axs[0,1].axvspan(xmin=agebins[j],xmax=agebins[j+1], color = agebinsc[j])  
+            if len(np.shape(agebins)) == 1:
+                for j in range(nage):
+                    axs[0,1].axvspan(xmin=agebins[j],xmax=agebins[j+1], color = agebinsc[j])
+            if len(np.shape(agebins)) == 2:
+                for j in range(len(agebins)):
+                    axs[0,1].axvspan(xmin=agebins[j][0],xmax=agebins[j][1], color = agebinsc[j])
 
         # Plot depositional age as a vertical line, if selected
         if plotDepoAge:
@@ -525,13 +529,21 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                 if colorKDE:
                     axKDE.fill_between(KDE_age, 0, KDE[i], alpha = 1, color=colorMe(i), lw=0)
                 if colorKDEbyAge:
-                    nage = len(agebins)-1                    
-                    for k in range(nage):
-                        xage1 = agebins[k]
-                        xage2 = agebins[k+1]
-                        KDE_agePart = np.arange(xage1, xage2+xdif, xdif)        
-                        KDEpart = KDE[i][int(xage1/xdif):int((xage2+xdif)/xdif)]
-                        axKDE.fill_between(KDE_agePart, 0, KDEpart, alpha = 1, color=agebinsc[k], lw=0)
+                    if len(np.shape(agebins)) == 1:
+                        nage = len(agebins)-1                    
+                        for k in range(nage):
+                            xage1 = agebins[k]
+                            xage2 = agebins[k+1]
+                            KDE_agePart = np.arange(xage1, xage2+xdif, xdif)        
+                            KDEpart = KDE[i][int(xage1/xdif):int((xage2+xdif)/xdif)]
+                            axKDE.fill_between(KDE_agePart, 0, KDEpart, alpha = 1, color=agebinsc[k], lw=0)
+                    if len(np.shape(agebins)) ==  2:
+                        for k in range(len(agebins)):
+                            xage1 = agebins[k][0]
+                            xage2 = agebins[k][1]
+                            KDE_agePart = np.arange(xage1, xage2+xdif, xdif)
+                            KDEpart = KDE[i][int(xage1/xdif):int((xage2+xdif)/xdif)]
+                            axKDE.fill_between(KDE_agePart, 0, KDEpart, alpha = 1, color=agebinsc[k], lw=0)
                 axKDE.set_xlim(x1, x2)
                 axKDE.legend(loc="upper right", prop={'size':8})
                 # Adjust the y-axis scale, depending on normalization
@@ -568,17 +580,29 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                 if colorPDP:
                     axPDP.fill_between(PDP_age, PDP[i], alpha = 1, color=colorMe(i))
                 if colorPDPbyAge:
-                    nage = len(agebins)-1
-                    for j in range(nage):                
-                        xage1 = agebins[j]
-                        xage2 = agebins[j+1]
-                        if (xage2 > x2 and xage1 <= x2): # Avoids a problem that would otherwise occur if any age bins are greater than x2
-                            xage2 = x2
-                        if (xage2 > x2 and xage1 >= x2):
-                            break
-                        PDP_agePart = np.arange(xage1, xage2+xdif, xdif)
-                        PDPpart = PDP[i][int(xage1/xdif):int((xage2+xdif)/xdif)]
-                        axPDP.fill_between(PDP_agePart, 0, PDPpart, alpha = 1, color=agebinsc[j])                                     
+                    if len(np.shape(agebins)) == 1:
+                        nage = len(agebins)-1
+                        for j in range(nage):                
+                            xage1 = agebins[j]
+                            xage2 = agebins[j+1]
+                            if (xage2 > x2 and xage1 <= x2): # Avoids a problem that would otherwise occur if any age bins are greater than x2
+                                xage2 = x2
+                            if (xage2 > x2 and xage1 >= x2):
+                                break
+                            PDP_agePart = np.arange(xage1, xage2+xdif, xdif)
+                            PDPpart = PDP[i][int(xage1/xdif):int((xage2+xdif)/xdif)]
+                            axPDP.fill_between(PDP_agePart, 0, PDPpart, alpha = 1, color=agebinsc[j])
+                    if len(np.shape(agebins)) == 2:
+                        for j in range(len(agebins)):
+                            xage1 = agebins[j][0]
+                            xage2 = agebins[j][1]
+                            if (xage2 > x2 and xage1 <= x2): # Avoids a problem that would otherwise occur if any age bins are greater than x2
+                                xage2 = x2
+                            if (xage2 > x2 and xage1 >= x2):
+                                break
+                            PDP_agePart = np.arange(xage1, xage2+xdif, xdif)
+                            PDPpart = PDP[i][int(xage1/xdif):int((xage2+xdif)/xdif)]
+                            axPDP.fill_between(PDP_agePart, 0, PDPpart, alpha = 1, color=agebinsc[j])
                 axPDP.set_xlim([x1, x2])
                 if normPlots:
                     pdfMax = 0
@@ -616,14 +640,22 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                 
             # Pie plot
             if plotPIE:
-                hist = np.histogram(ages[i], agebins)
-                hist = hist[0]
+                if len(np.shape(agebins)) == 1:
+                    hist = np.histogram(ages[i], agebins)[0]
+                if len(np.shape(agebins)) == 2:
+                    hist = []
+                    for j in range(len(agebins)):
+                        hist.append(np.histogram(ages[i],agebins[j])[0][0])
                 axs[c+i,0].pie(hist, colors=agebinsc, startangle=90, counterclock=False, radius=0.75)
             
             # Plot colored vertical bars, if selected
             if plotColorBar:
-                for j in range(nage):
-                    axs[c+i,1].axvspan(xmin=agebins[j],xmax=agebins[j+1], color = agebinsc[j])
+                if len(np.shape(agebins)) == 1:
+                    for j in range(nage):
+                        axs[c+i,1].axvspan(xmin=agebins[j],xmax=agebins[j+1], color = agebinsc[j])
+                if len(np.shape(agebins)) == 2:
+                    for j in range(len(agebins)):
+                        axs[c+i,1].axvspan(xmin=agebins[j][0],xmax=agebins[j][1], color = agebinsc[j])
 
     return fig
 
@@ -761,8 +793,12 @@ def plotAll_2(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
         else:
             axs[0,0].set_xlabel('Age (Ma)')
         if plotColorBar:
-            for j in range(nage):
-                axs[0,0].axvspan(xmin=agebins[j],xmax=agebins[j+1], color = agebinsc[j])          
+            if len(np.shape(agebins)) == 1:
+                for j in range(nage):
+                    axs[0,0].axvspan(xmin=agebins[j],xmax=agebins[j+1], color = agebinsc[j])
+            if len(np.shape(agebins)) == 2:
+                for j in range(len(agebins)):
+                    axs[0,0].axvspan(xmin=agebins[j][0],xmax=agebins[j][1], color = agebinsc[j])
 
     # Plot the relative distribution (PDP and/or KDE)
     if (whatToPlot == 'both' or whatToPlot == 'relative'):
@@ -806,13 +842,22 @@ def plotAll_2(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                 axs[c,0].plot(KDE_age, KDEshift[i], color='black', lw=KDElw)
                 if colorKDE:
                     axs[c,0].fill_between(KDE_age, np.min(KDEshift[i]), KDEshift[i], alpha = 1, color=colorMe(i), lw=0)
-                if colorKDEbyAge:                
-                    for k in range(nage):
-                        xage1 = agebins[k]
-                        xage2 = agebins[k+1]
-                        KDE_agePart = np.arange(xage1, xage2+xdif, xdif)        
-                        KDEshiftPart = KDEshift[i][int(xage1/xdif):int((xage2+xdif)/xdif)]
-                        axs[c,0].fill_between(KDE_agePart, np.min(KDEshift[i]), KDEshiftPart, alpha = 1, color=agebinsc[k], lw=0)
+
+                if colorKDEbyAge:
+                    if len(np.shape(agebins)) == 1:
+                        for k in range(nage):
+                            xage1 = agebins[k]
+                            xage2 = agebins[k+1]
+                            KDE_agePart = np.arange(xage1, xage2+xdif, xdif)        
+                            KDEshiftPart = KDEshift[i][int(xage1/xdif):int((xage2+xdif)/xdif)]
+                            axs[c,0].fill_between(KDE_agePart, np.min(KDEshift[i]), KDEshiftPart, alpha = 1, color=agebinsc[k], lw=0)
+                    if len(np.shape(agebins)) ==  2:
+                        for k in range(len(agebins)):
+                            xage1 = agebins[k][0]
+                            xage2 = agebins[k][1]
+                            KDE_agePart = np.arange(xage1, xage2+xdif, xdif)
+                            KDEshiftPart = KDEshift[i][int(xage1/xdif):int((xage2+xdif)/xdif)]
+                            axs[c,0].fill_between(KDE_agePart, np.min(KDEshift[i]), KDEshiftPart, alpha = 1, color=agebinsc[k], lw=0)
             if plotPDP:
                 # Shift PDP y-values
                 PDPshift = PDP.copy()
@@ -820,19 +865,32 @@ def plotAll_2(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                 axs[c,0].plot(PDP_age, PDPshift[i], color='black', lw=PDPlw)
                 if colorPDP:
                     axs[c,0].fill_between(PDP_age, np.min(PDPshift[i]), PDPshift[i], alpha = 1, color=colorMe(i), lw=0)
-                if colorPDPbyAge:                
-                    for k in range(nage):
-                        xage1 = agebins[k]
-                        xage2 = agebins[k+1]
-                        PDP_agePart = np.arange(xage1, xage2+xdif, xdif)        
-                        PDPshiftPart = PDPshift[i][int(xage1/xdif):int((xage2+xdif)/xdif)]
-                        axs[c,0].fill_between(PDP_agePart, np.min(PDPshift[i]), PDPshiftPart, alpha = 1, color=agebinsc[k], lw=0)    
+                if colorPDPbyAge:
+                    if len(np.shape(agebins)) == 1:        
+                        for k in range(nage):
+                            xage1 = agebins[k]
+                            xage2 = agebins[k+1]
+                            PDP_agePart = np.arange(xage1, xage2+xdif, xdif)        
+                            PDPshiftPart = PDPshift[i][int(xage1/xdif):int((xage2+xdif)/xdif)]
+                            axs[c,0].fill_between(PDP_agePart, np.min(PDPshift[i]), PDPshiftPart, alpha = 1, color=agebinsc[k], lw=0)
+                    if len(np.shape(agebins)) == 2:
+                        for k in range(len(agebins)):
+                            xage1 = agebins[k][0]
+                            xage2 = agebins[k][1]
+                            PDP_agePart = np.arange(xage1, xage2+xdif, xdif)        
+                            PDPshiftPart = PDPshift[i][int(xage1/xdif):int((xage2+xdif)/xdif)]
+                            axs[c,0].fill_between(PDP_agePart, np.min(PDPshift[i]), PDPshiftPart, alpha = 1, color=agebinsc[k], lw=0)                          
             axs[c,0].text(x2+(x2-x1)*0.01, distMaxCumSum[i], s=labels[i], size='x-small')
         
         # Plot colored vertical bars, if selected
         if plotColorBar:
-            for j in range(nage):
-                axs[c,0].axvspan(xmin=agebins[j],xmax=agebins[j+1], color = agebinsc[j])     
+            if len(np.shape(agebins)) == 1:
+                for j in range(nage):
+                    axs[c,0].axvspan(xmin=agebins[j],xmax=agebins[j+1], color = agebinsc[j])
+            if len(np.shape(agebins)) == 2:
+                for j in range(len(agebins)):
+                    axs[c,0].axvspan(xmin=agebins[j][0],xmax=agebins[j][1], color = agebinsc[j])
+
         axs[c,0].set_ylim(0)
         axs[c,0].set_xlim(x1,x2)
    
@@ -1140,12 +1198,20 @@ def plotDouble(sampleList, main_byid_df, ages, errors, numGrains, labels, variab
             if colorKDE:
                 axs[c+t,0].fill_between(KDE_age, 0, KDE[i], alpha = 1, color=colorMe(i), lw=0)
             if colorKDEbyAge:
-                for k in range(nage):
-                    xage1 = agebins[k]
-                    xage2 = agebins[k+1]
-                    KDE_agePart = np.arange(xage1, xage2+xdif, xdif)        
-                    KDEpart = KDE[i][int(xage1/xdif):int((xage2+xdif)/xdif)]
-                    axs[c+t,0].fill_between(KDE_agePart, 0, KDEpart, alpha = 1, color=agebinsc[k], lw=0)
+                if len(np.shape(agebins)) == 1:
+                    for k in range(nage):
+                        xage1 = agebins[k]
+                        xage2 = agebins[k+1]
+                        KDE_agePart = np.arange(xage1, xage2+xdif, xdif)        
+                        KDEpart = KDE[i][int(xage1/xdif):int((xage2+xdif)/xdif)]
+                        axs[c+t,0].fill_between(KDE_agePart, 0, KDEpart, alpha = 1, color=agebinsc[k], lw=0)
+                if len(np.shape(agebins)) == 2:
+                    for k in range(len(agebins)):
+                        xage1 = agebins[k][0]
+                        xage2 = agebins[k][1]
+                        KDE_agePart = np.arange(xage1, xage2+xdif, xdif)        
+                        KDEpart = KDE[i][int(xage1/xdif):int((xage2+xdif)/xdif)]
+                        axs[c+t,0].fill_between(KDE_agePart, 0, KDEpart, alpha = 1, color=agebinsc[k], lw=0)
             axs[c+t,0].set_xlim(x1, x2)
             axs[c+t,0].legend(loc="upper right", prop={'size':8})
             # Adjust the y-axis scale, depending on normalization
@@ -1168,17 +1234,29 @@ def plotDouble(sampleList, main_byid_df, ages, errors, numGrains, labels, variab
             if colorPDP:
                 axPDP.fill_between(PDP_age, PDP[i], alpha = 1, color=colorMe(i))
             if colorPDPbyAge:
-                nage = len(agebins)-1
-                for j in range(nage):                
-                    xage1 = agebins[j]
-                    xage2 = agebins[j+1]
-                    if (xage2 > x2 and xage1 <= x2): # Avoids a problem that would otherwise occur if any age bins are greater than x2
-                        xage2 = x2
-                    if (xage2 > x2 and xage1 >= x2):
-                        break
-                    PDP_agePart = np.arange(xage1, xage2+xdif, xdif)
-                    PDPpart = PDP[i][int(xage1/xdif):int((xage2+xdif)/xdif)]
-                    axPDP.fill_between(PDP_agePart, 0, PDPpart, alpha = 1, color=agebinsc[j])             
+                if len(np.shape(agebins)) == 1:
+                    nage = len(agebins)-1
+                    for j in range(nage):                
+                        xage1 = agebins[j]
+                        xage2 = agebins[j+1]
+                        if (xage2 > x2 and xage1 <= x2): # Avoids a problem that would otherwise occur if any age bins are greater than x2
+                            xage2 = x2
+                        if (xage2 > x2 and xage1 >= x2):
+                            break
+                        PDP_agePart = np.arange(xage1, xage2+xdif, xdif)
+                        PDPpart = PDP[i][int(xage1/xdif):int((xage2+xdif)/xdif)]
+                        axPDP.fill_between(PDP_agePart, 0, PDPpart, alpha = 1, color=agebinsc[j])
+                if len(np.shape(agebins)) == 2:
+                    for j in range(len(agebins)):
+                        xage1 = agebins[j][0]
+                        xage2 = agebins[j][1]
+                        if (xage2 > x2 and xage1 <= x2): # Avoids a problem that would otherwise occur if any age bins are greater than x2
+                            xage2 = x2
+                        if (xage2 > x2 and xage1 >= x2):
+                            break
+                        PDP_agePart = np.arange(xage1, xage2+xdif, xdif)
+                        PDPpart = PDP[i][int(xage1/xdif):int((xage2+xdif)/xdif)]
+                        axPDP.fill_between(PDP_agePart, 0, PDPpart, alpha = 1, color=agebinsc[j])
             axPDP.set_xlim([x1, x2])
             if normPlots:
                 pdfMax = 0
@@ -1210,8 +1288,12 @@ def plotDouble(sampleList, main_byid_df, ages, errors, numGrains, labels, variab
             
         # Plot colored vertical bars, if selected
         if plotColorBar:
-            for j in range(nage):
-                axs[c+1,0].axvspan(xmin=agebins[j],xmax=agebins[j+1], color = agebinsc[j])
+            if len(np.shape(agebins)) == 1:
+                for j in range(nage):
+                    axs[c+1,0].axvspan(xmin=agebins[j],xmax=agebins[j+1], color = agebinsc[j])
+            if len(np.shape(agebins)) == 2:
+                for j in range(len(agebins)):
+                    axs[c,0].axvspan(xmin=agebins[j][0],xmax=agebins[j][1], color = agebinsc[j])
         c = c+t+l
         
     return fig
@@ -1234,7 +1316,10 @@ def ageProportionsCSV(ages, errors, numGrains, labels, agebins, fileName):
     """ 
     import csv
 
-    numCategories = len(agebins)-1
+    if len(np.shape(agebins)) == 1:
+        numCategories = len(agebins)-1
+    if len(np.shape(agebins)) == 2:
+        numCategories = len(agebins)
     agecategory = []
     agecategoryp = []
     rowLabels = ['Sample','numGrains']
@@ -1245,18 +1330,30 @@ def ageProportionsCSV(ages, errors, numGrains, labels, agebins, fileName):
 
         # Create category names (age ranges)
         for i in range(numCategories):
-            agecategory = np.append(agecategory, ('%d' % agebins[i])+('-%d' % agebins[i+1])+(' Ma'))
+            if len(np.shape(agebins)) == 1:
+                agecategory = np.append(agecategory, ('%d' % agebins[i])+('-%d' % agebins[i+1])+(' Ma'))
+            if len(np.shape(agebins)) == 2:
+                agecategory = np.append(agecategory, ('%d' % agebins[i][0])+('-%d' % agebins[i][1])+(' Ma'))
             rowLabels = np.append(rowLabels, agecategory[i])
-        for i in range(numCategories):        
-            agecategoryp = np.append(agecategoryp, ('%d' % agebins[i])+('-%d' % agebins[i+1])+(' Ma (%)'))
+        for i in range(numCategories):
+            if len(np.shape(agebins)) == 1:
+                agecategoryp = np.append(agecategoryp, ('%d' % agebins[i])+('-%d' % agebins[i+1])+(' Ma (%)'))
+            if len(np.shape(agebins)) == 2:
+                agecategoryp = np.append(agecategoryp, ('%d' % agebins[i][0])+('-%d' % agebins[i][1])+(' Ma (%)'))
             rowLabels = np.append(rowLabels, agecategoryp[i])
 
         writer.writerow((rowLabels))
 
         for i in range(len(ages)):
             data_row = [labels[i], float(numGrains[i])]
-            hist, histp = np.histogram(ages[i], agebins)
-            histp = hist/float(numGrains[i])
+            if len(np.shape(agebins)) == 1:
+                hist, histp = np.histogram(ages[i], agebins)
+                histp = hist/float(numGrains[i])
+            if len(np.shape(agebins)) == 2:
+                hist = []
+                for j in range(len(agebins)):
+                    hist.append(np.histogram(ages[i],agebins[j])[0][0])
+                histp = hist/np.sum(hist)          
             for j in range(numCategories):
                 data_row = np.append(data_row, hist[j])
             for j in range(numCategories):
@@ -1299,7 +1396,13 @@ def plotBar(width, height, overlap, main_byid_df, sampleList, ages, numGrains, l
                 y = np.arange(N,0.,-1.)
                 for j in range(N): # Loop for each sample
                     ages = sampleToData(sampleList[i][0], main_byid_df)[0]
-                    hist = np.histogram(ages[j], agebins)[0]
+                    if len(np.shape(agebins)) == 1:
+                        hist = np.histogram(ages[j], agebins)[0]
+                    if len(np.shape(agebins)) == 2:
+                        hist = []
+                        for k in range(len(agebins)):
+                            hist.append(np.histogram(ages[j],agebins[k])[0][0])
+                        hist = np.asarray(hist)
                     hist = hist/len(ages[j])
                     left = 0
                     for k in range(len(hist)): # Loop for each age population category
@@ -1319,7 +1422,13 @@ def plotBar(width, height, overlap, main_byid_df, sampleList, ages, numGrains, l
             figBar, ax = plt.subplots(1, figsize=(2*width,N*(height+1-overlap)))            
             y = np.arange(N,0.,-1.)
             for i in range(len(sampleList)):
-                hist = np.histogram(ages[i], agebins)[0]
+                if len(np.shape(agebins)) == 1:
+                    hist = np.histogram(ages[i], agebins)[0]
+                if len(np.shape(agebins)) == 2:
+                    hist = []
+                    for j in range(len(agebins)):
+                        hist.append(np.histogram(ages[i],agebins[j])[0][0])
+                    hist = np.asarray(hist)
                 hist = hist/len(ages[i])
                 left = 0
                 for j in range(len(hist)):
@@ -1339,7 +1448,13 @@ def plotBar(width, height, overlap, main_byid_df, sampleList, ages, numGrains, l
         figBar, ax = plt.subplots(1, figsize=(2*width,N*height))        
         y = np.arange(N,0.,-1.)
         for i in range(len(sampleList)):
-            hist = np.histogram(ages[i], agebins)[0]
+            if len(np.shape(agebins)) == 1:
+                hist = np.histogram(ages[i], agebins)[0]
+            if len(np.shape(agebins)) == 2:
+                hist = []
+                for j in range(len(agebins)):
+                    hist.append(np.histogram(ages[i],agebins[j])[0][0])
+                hist = np.asarray(hist)
             hist = hist/len(ages[i])
             left = 0
             for j in range(len(hist)):
@@ -1791,8 +1906,7 @@ def MDAtoCSV(sampleList, ages, errors, numGrains, labels, fileName, sortBy, barW
         if makePlot:
             return figMDA
                 
-def MDS(ages, errors, labels, sampleList, metric, plotWidth, plotHeight, plotPie, pieSize, agebins, agebinsc, criteria='Dmax', bw='optimizedFixed', color='Default', main_byid_df=None,
-    pieBinStyle = 'Normal'):
+def MDS(ages, errors, labels, sampleList, metric, plotWidth, plotHeight, plotPie, pieSize, agebins, agebinsc, criteria='Dmax', bw='optimizedFixed', color='Default', main_byid_df=None):
     """
     Create a multi-dimensional scaling (MDS) plot for individual samples or groups of samples.
 
@@ -1809,7 +1923,7 @@ def MDS(ages, errors, labels, sampleList, metric, plotWidth, plotHeight, plotPie
     plotHeight : specify the height of the plot
     plotPie : set to True to plot data points as pies
     pieSize : specify the size of pie plots
-    agebins : array of bin edges (Myr)
+    agebins : array of bin edges in Myr. Format option 1: [age1, age2, age3, etc.]. Format option 2: [[bin1_min, bin1_max],[bin2_min, bin2_max],etc.]
     agebinsc : array of colors that correspond to age bins
     criteria : (optional) similiarty metric used in the MDS calculation. Options: 'Dmax' (default), 'Vmax', 'R2-PDP', 'R2-KDE'
     bw : (optional) KDE bandwidth. Options are 'optimizedFixed', 'optimizedVariable', or a number (bandwidth in Myr)
@@ -1875,14 +1989,14 @@ def MDS(ages, errors, labels, sampleList, metric, plotWidth, plotHeight, plotPie
 
     for i in range(len(npos)):
         if plotPie:
-            if pieBinStyle == 'Normal':
+            if len(np.shape(agebins)) == 1:
                 hist = np.histogram(ages[i],agebins)[0]
                 histP = np.cumsum([0]+list(hist/np.sum(hist)))
                 for j in range(len(hist)): # One loop for each bin
                     x = [0] + np.cos(np.linspace(2*math.pi*histP[j], 2*math.pi*histP[j+1], 100)).tolist()
                     y = [0] + np.sin(np.linspace(2*math.pi*histP[j], 2*math.pi*histP[j+1], 100)).tolist()
                     ax.fill(np.array(x)*pieSize+m[i][0],np.array(y)*pieSize+m[i][1],facecolor=agebinsc[j])
-            if pieBinStyle == 'Alternative':
+            if len(np.shape(agebins)) == 2:
                 hist = [0]
                 for j in range(len(agebins)):
                     hist.append(np.histogram(ages[i],agebins[j])[0][0])
@@ -1932,7 +2046,7 @@ def plotDoubleDating(main_byid_df, sampleList, x1, x2, y1, y2, plotKDE, colorKDE
     width : width of the plot
     height : height of the plot
     savePlot : set to True to save the plot as a PDF file
-    agebins : array of bin edges (Myr)
+    agebins : array of bin edges in Myr. Format option 1: [age1, age2, age3, etc.]. Format option 2: [[bin1_min, bin1_max],[bin2_min, bin2_max],etc.]
     agebinsc : array of colors that correspond to age bins
     coolingAge : (optional) label for column with cooling ages. Default: 'ZHe_Age'
     coolingAgeErr : (optional) label for column with cooling age errors. Default: 'ZHe_Age_Err'
@@ -2027,14 +2141,24 @@ def plotDoubleDating(main_byid_df, sampleList, x1, x2, y1, y2, plotKDE, colorKDE
             axsPDP.get_yaxis().set_ticks([])
             if colorPDP:
                 axsPDP.fill_between(xPDP[0], xPDP[1][0], alpha = 1, color=colorMe(i))
+
             if colorPDPbyAge:
-                nage = len(agebins)-1
-                for j in range(nage):
-                    xage1 = agebins[j]
-                    xage2 = agebins[j+1] 
-                    PDPpart = xPDP[1][0][int(xage1/xdif):int((xage2+xdif)/xdif)]
-                    PDP_agePart = np.arange(xage1, xage1+len(PDPpart), xdif)
-                    axsPDP.fill_between(PDP_agePart, 0, PDPpart, alpha = 1, color=agebinsc[j])
+                if len(np.shape(agebins)) == 1:
+                    nage = len(agebins)-1
+                    for j in range(nage):                
+                        xage1 = agebins[j]
+                        xage2 = agebins[j+1]
+                        PDPpart = xPDP[1][0][int(xage1/xdif):int((xage2+xdif)/xdif)]
+                        PDP_agePart = np.arange(xage1, xage1+len(PDPpart), xdif)
+                        axsPDP.fill_between(PDP_agePart, 0, PDPpart, alpha = 1, color=agebinsc[j])
+                if len(np.shape(agebins)) == 2:
+                    for j in range(len(agebins)):
+                        xage1 = agebins[j][0]
+                        xage2 = agebins[j][1]
+                        PDPpart = xPDP[1][0][int(xage1/xdif):int((xage2+xdif)/xdif)]
+                        PDP_agePart = np.arange(xage1, xage2+xdif, xdif)
+                        PDP_agePart = np.arange(xage1, xage1+len(PDPpart), xdif)
+                        axsPDP.fill_between(PDP_agePart, 0, PDPpart, alpha = 1, color=agebinsc[j])
         if plotKDE:
             if bw == 'optimizedFixed':
                 xKDE = KDEcalcAgesLocalAdapt(ages=x, xdif=xdif)
@@ -2051,13 +2175,22 @@ def plotDoubleDating(main_byid_df, sampleList, x1, x2, y1, y2, plotKDE, colorKDE
             if colorKDE:
                 axsKDE.fill_between(xKDE[0], xKDE[1][0], alpha = 1, color=colorMe(i))
             if colorKDEbyAge:
-                nage = len(agebins)-1
-                for j in range(nage):
-                    xage1 = agebins[j]
-                    xage2 = agebins[j+1] 
-                    KDEpart = xKDE[1][0][int(xage1/xdif):int((xage2+xdif)/xdif)]
-                    KDE_agePart = np.arange(xage1, xage1+len(KDEpart), xdif)
-                    axsKDE.fill_between(KDE_agePart, 0, KDEpart, alpha = 1, color=agebinsc[j])
+                if len(np.shape(agebins)) == 1:
+                    nage = len(agebins)-1
+                    for j in range(nage):
+                        xage1 = agebins[j]
+                        xage2 = agebins[j+1] 
+                        KDEpart = xKDE[1][0][int(xage1/xdif):int((xage2+xdif)/xdif)]
+                        KDE_agePart = np.arange(xage1, xage1+len(KDEpart), xdif)
+                        axsKDE.fill_between(KDE_agePart, 0, KDEpart, alpha = 1, color=agebinsc[j])
+                if len(np.shape(agebins)) == 2:
+                     for j in range(len(agebins)):
+                        xage1 = agebins[j][0]
+                        xage2 = agebins[j][1]
+                        KDEpart = xKDE[1][0][int(xage1/xdif):int((xage2+xdif)/xdif)]
+                        KDE_agePart = np.arange(xage1, xage2+xdif, xdif)
+                        KDE_agePart = np.arange(xage1, xage1+len(KDEpart), xdif)
+                        axsKDE.fill_between(KDE_agePart, 0, KDEpart, alpha = 1, color=agebinsc[j])                   
 
         # Zircon (U-Th)/He age distribution   
         if plotHist:
@@ -2076,14 +2209,24 @@ def plotDoubleDating(main_byid_df, sampleList, x1, x2, y1, y2, plotKDE, colorKDE
             axsPDP.get_xaxis().set_ticks([])
             if colorPDP:
                 axsPDP.fill_betweenx(yPDP[0], 0, yPDP[1][0], alpha = 1, color=colorMe(i))
+
             if colorPDPbyAge:
-                nage = len(agebins)-1
-                for j in range(nage):
-                    xage1 = agebins[j]
-                    xage2 = agebins[j+1] 
-                    PDPpart = yPDP[1][0][int(xage1/xdif):int((xage2+xdif)/xdif)]
-                    PDP_agePart = np.arange(xage1, xage1+len(PDPpart), xdif)
-                    axsPDP.fill_betweenx(PDP_agePart, 0, PDPpart,  alpha = 1, color=agebinsc[j])
+                if len(np.shape(agebins)) == 1:
+                    nage = len(agebins)-1
+                    for j in range(nage):                
+                        xage1 = agebins[j]
+                        xage2 = agebins[j+1]
+                        PDPpart = yPDP[1][0][int(xage1/xdif):int((xage2+xdif)/xdif)]
+                        PDP_agePart = np.arange(xage1, xage1+len(PDPpart), xdif)
+                        axsPDP.fill_betweenx(PDP_agePart, 0, PDPpart, alpha = 1, color=agebinsc[j])
+                if len(np.shape(agebins)) == 2:
+                    for j in range(len(agebins)):
+                        xage1 = agebins[j][0]
+                        xage2 = agebins[j][1]
+                        PDPpart = yPDP[1][0][int(xage1/xdif):int((xage2+xdif)/xdif)]
+                        PDP_agePart = np.arange(xage1, xage2+xdif, xdif)
+                        PDP_agePart = np.arange(xage1, xage1+len(PDPpart), xdif)
+                        axsPDP.fill_betweenx(PDP_agePart, 0, PDPpart, alpha = 1, color=agebinsc[j])
         if plotKDE:
             if bw == 'optimizedFixed':
                 yKDE = KDEcalcAgesLocalAdapt(ages=[yF], xdif=xdif)
@@ -2099,13 +2242,22 @@ def plotDoubleDating(main_byid_df, sampleList, x1, x2, y1, y2, plotKDE, colorKDE
             if colorKDE:
                 axsKDE.fill_betweenx(yKDE[0], 0, yKDE[1][0], alpha = 1, color=colorMe(i))
             if colorKDEbyAge:
-                nage = len(agebins)-1
-                for j in range(nage):
-                    xage1 = agebins[j]
-                    xage2 = agebins[j+1] 
-                    KDEpart = yKDE[1][0][int(xage1/xdif):int((xage2+xdif)/xdif)]
-                    KDE_agePart = np.arange(xage1, xage1+len(KDEpart), xdif)
-                    axsKDE.fill_betweenx(KDE_agePart, 0, KDEpart,  alpha = 1, color=agebinsc[j])
+                if len(np.shape(agebins)) == 1:
+                    nage = len(agebins)-1
+                    for j in range(nage):
+                        xage1 = agebins[j]
+                        xage2 = agebins[j+1] 
+                        KDEpart = yKDE[1][0][int(xage1/xdif):int((xage2+xdif)/xdif)]
+                        KDE_agePart = np.arange(xage1, xage1+len(KDEpart), xdif)
+                        axsKDE.fill_betweenx(KDE_agePart, 0, KDEpart,  alpha = 1, color=agebinsc[j])
+                if len(np.shape(agebins)) == 2:
+                    for j in range(len(agebins)):
+                        xage1 = agebins[j][0]
+                        xage2 = agebins[j][1]
+                        KDEpart = yKDE[1][0][int(xage1/xdif):int((xage2+xdif)/xdif)]
+                        KDE_agePart = np.arange(xage1, xage2+xdif, xdif)
+                        KDE_agePart = np.arange(xage1, xage1+len(KDEpart), xdif)
+                        axsKDE.fill_betweenx(KDE_agePart, 0, KDEpart, alpha = 1, color=agebinsc[j])                    
 
         # Label the upper left hand corner of the plot with the sample ID
         if type(sampleList[0])==tuple:
