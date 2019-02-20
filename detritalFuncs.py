@@ -1719,7 +1719,8 @@ def plotFoliumMap(sampleList, main_byid_df, ages, errors, numGrains, plotMapKDE,
         folium.LayerControl().add_to(m)
     if exportKML:
         pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
-        kml.save(pathlib.Path("Output/") / 'samples.kml')
+        ####
+        kml.save(str(pathlib.Path('Output/') / (('samples')+('.kml'))))
     return m
 
 def MDAtoCSV(sampleList, ages, errors, numGrains, labels, fileName, sortBy, barWidth, plotWidth, plotHeight, ageColors, alpha, makePlot, fillMDACalcs):
@@ -1758,7 +1759,8 @@ def MDAtoCSV(sampleList, ages, errors, numGrains, labels, fileName, sortBy, barW
     import matplotlib.pyplot as plt
     
     pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
-    with open(pathlib.Path("Output/") / fileName, 'w', newline='') as f: #Select the CSV file to save data to
+    #####
+    with open(str(pathlib.Path('Output/')) + fileName, 'w', newline='') as f: #Select the CSV file to save data to
         writer = csv.writer(f)
         writer.writerow(('Sample','N', 'YSG', 'YSG_err1s', 'YC1S WM', 'YC1S WM 1serr', 'YC1S WM MSWD', 'YC1S cluster size', 'YC2S WM', 'YC2S WM 1serr', 'YC2S WM MSWD', 'YC2S cluster size'))
         N = len(sampleList) # Number of samples or groups of samples
@@ -2315,7 +2317,7 @@ def exportDist(ages, errors, labels, exportType, cumulative, x1, x2, xdif, bw, f
             dist[i] = dist[i]/sum(dist[i])      
     
     pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
-    with open(pathlib.Path('Output/') / fileName, 'w', newline='') as f: #Select the CSV file to save data to
+    with open(str(pathlib.Path('Output/')) + fileName, 'w', newline='') as f: #Select the CSV file to save data to
         writer = csv.writer(f)
 
         dataRow = ['Age'] # create an empty array    
@@ -2353,7 +2355,7 @@ def agesErrorsCSV(ages, errors, sampleList, fileName):
     maxNumGrains = max([len(l) for l in agesErrors])
 
     pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
-    with open(pathlib.Path("Output/") / fileName, 'w', newline='') as f: #Select the CSV file to save data to
+    with open(str(pathlib.Path('Output/')) + fileName, 'w', newline='') as f: #Select the CSV file to save data to
         writer = csv.writer(f)
 
         # Write sample name column headings. The extra blank is to take up two columns per sample heading.
@@ -2420,7 +2422,7 @@ def calcComparisonCSV(ages, errors, numGrains, labels, sampleList, calculateSimi
                 dist = KDEcalcAges_2(ages, bw=bw)[1]
     
     pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
-    with open(pathlib.Path("Output/") / fileName, 'w', newline='') as f: #Select the CSV file to save data to , 'wb'
+    with open(str(pathlib.Path('Output/')) + fileName, 'w', newline='') as f: #Select the CSV file to save data to , 'wb'
         writer = csv.writer(f)
         labelRow = ['Label','n']
         for i in range(len(sampleList)):
@@ -2524,7 +2526,7 @@ def weightedMeanCSV(ages, errors, numGrains, labels, fileName='weightedMean.csv'
     import csv
     
     pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
-    with open(pathlib.Path("Output/") / fileName, 'w', newline='') as f: #Select the CSV file to save data to
+    with open(str(pathlib.Path('Output/')) + fileName, 'w', newline='') as f: #Select the CSV file to save data to
         writer = csv.writer(f)
         labelRow = ['Sample','Ngrains','Mean','2s internal error','MSWD']
         writer.writerow(labelRow)
