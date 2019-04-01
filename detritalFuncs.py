@@ -244,10 +244,10 @@ def sampleToVariable(sampleList, main_byid_df, variableName):
 # Functions for plotting and analyzing detrital data
 ###############################################################
 
-def plotAll(sampleList, ages, errors, numGrains, labels, whatToPlot, separateSubplots, plotCDF, plotCPDP, plotCKDE, plotDKW, normPlots, plotKDE,
- colorKDE, colorKDEbyAge, plotPDP, colorPDP, colorPDPbyAge, plotColorBar, plotHist, plotLog, plotPIE, x1, x2, b, bw, xdif, agebins, agebinsc, 
- w, c, h, plotAgePeaks, agePeakOptions, CDFlw=3, KDElw=1, PDPlw=1, plotDepoAge = False, depoAge = [0], plotAgesOnCDF = False, plotHeatMap = False, 
- heatMapType = None, heatMap = 'inferno_r'):
+def plotAll(sampleList, ages, errors, numGrains, labels, whatToPlot='both', separateSubplots=True, plotCDF=True, plotCPDP=False, plotCKDE=False, plotDKW=False,
+ normPlots=False, plotKDE=False, colorKDE=False, colorKDEbyAge=False, plotPDP=True, colorPDP=True, colorPDPbyAge=False, plotColorBar=False, plotHist=False,
+  plotLog=False, plotPIE=False, x1=0, x2=4000, b=25, bw=10, xdif=1, agebins=None, agebinsc=None, w=10, c=4, h=5, plotAgePeaks=False, agePeakOptions=None,
+   CDFlw=3, KDElw=1, PDPlw=1, plotDepoAge = False, depoAge = [0], plotAgesOnCDF = False, plotHeatMap = False, heatMapType = None, heatMap = 'inferno_r'):
     """
     Creates a plot of detrital age distributions using a variety of the most common data visualization approaches. The plotting function is divided into a cumulative distribution plot and a relative distribution plot. When both are plotted together, the cumulative distribution is shown on top and the relative distribution for each sample or group of samples is shown below.
 
@@ -330,7 +330,9 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
             N[i] = len(sampleList[i][0])
     else:
         N = N + 1
-    nage = len(agebins)-1   
+    
+    if agebins is not None:
+        nage = len(agebins)-1   
     n = len(sampleList)
     
     # Sets figure font options
@@ -1413,7 +1415,7 @@ def plotBar(width, height, overlap, main_byid_df, sampleList, ages, numGrains, l
                 ax.set_ylabel('Sample ID')
                 ax.set_yticks(y)
                 ax.set_yticklabels((sampleList[i][0])) 
-                ax.set_xlim(0.,1.) 
+                ax.set_xlim(0.,1.)
                 if savePlot:
                     pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
                     figBar.savefig(pathlib.Path('Output/') / (('Bar_%s' %sampleList[i][1])+('.pdf')))                      
@@ -2767,15 +2769,33 @@ def colorMe(i):
     return colors[i%len(colors)]
 
 def weightedMean(ages,error1s,conf=0.95):
+    """
+    Calculates the weighted mean, its 2-sigma uncertainty, and MSWD
+
+    Paramters
+    ---------
+    ages : a 1D array of ages
+    errors : an array of 1-sigma errors
+    conf : (optional) confidence level
+
+    Returns
+    -------
+    Twm : weighted mean age
+    sm : 2-sigma uncertainty
+    MSWD : Mean Square of the Weighted Deviation
+
+    """
+
+
     from scipy import stats
     
-    w=error1s**(-2)/np.sum(error1s**(-2)) # weight
-    Twm=np.sum(w*ages) # weight mean of age
-    S=np.sum((ages-Twm)**2/error1s**2) # S
+    w=np.array(error1s)**(-2)/np.sum(np.array(error1s)**(-2)) # weight
+    Twm=np.sum(w*np.array(ages)) # weight mean of age
+    S=np.sum((np.array(ages)-Twm)**2/np.array(error1s)**2) # S
     N=len(ages)
     MSWD=S/(N-1) # Mean Square of the Weighted Deviation
     # Standard deviation of the weighted mean (2 sigma)
-    sm=stats.norm.ppf(conf+(1-conf)/2.)*np.sqrt(1./np.sum(error1s**(-2)))
+    sm=stats.norm.ppf(conf+(1-conf)/2.)*np.sqrt(1./np.sum(np.array(error1s)**(-2)))
     
     return(Twm,sm,MSWD)
 
