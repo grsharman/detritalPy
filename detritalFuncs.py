@@ -96,7 +96,8 @@ def loadDataExcel(dataToPlot, mainSheet = 'Samples', dataSheet = 'ZrUPb', ID_col
                     if colname not in main_df.columns:
                         main_df[colname] = (np.nan*np.empty(shape=(len(main_df),1))).tolist()
                         #main_df[colname] = (np.nan*np.ones(main_df.shape)).tolist()
-                        main_df[colname] = main_df[colname].astype(np.ndarray)
+                        main_df[colname] = np.asarray(main_df[colname])
+                        #main_df[colname] = main_df[colname].astype(np.ndarray)
                     main_df.at[sample_ind,colname] = active_UPb_data[colname].values
     
         # Make a copy of the dataset and set the sample ID as index
