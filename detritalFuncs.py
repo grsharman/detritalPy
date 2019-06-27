@@ -1652,7 +1652,7 @@ def plotFoliumMap(sampleList, main_byid_df, ages, errors, numGrains, plotMapKDE,
                         distArea = vincent.Area(dist[1][j].tolist(), width=400, height=100)
                         distArea.axis_titles(x='Age (Ma)', y='')
                         distArea.legend(title=sampleList[i][0][j])
-                        popup = folium.Popup(max_width=600)
+                        popup = folium.Popup(max_width=600, sticky=True)
                         folium.Vega(distArea, height=150, width=500).add_to(popup)
                         folium.RegularPolygonMarker([main_byid_df.ix[sampleList[i][0][j],'Latitude'],main_byid_df.ix[sampleList[i][0][j],
                                                 'Longitude']], fill_color=colorMe(i), radius=6, popup=popup).add_to(feature_group)
@@ -1660,7 +1660,7 @@ def plotFoliumMap(sampleList, main_byid_df, ages, errors, numGrains, plotMapKDE,
                         distLine = vincent.Line(dist[1][j].tolist(), width=400, height=100)
                         distLine.axis_titles(x='Age (Ma)', y='')
                         distLine.legend(title=sampleList[i][0][j])
-                        popup = folium.Popup(max_width=600)
+                        popup = folium.Popup(max_width=600, sticky=True)
                         folium.Vega(distLine, height=150, width=500).add_to(popup)
                         folium.RegularPolygonMarker([main_byid_df.ix[sampleList[i][0][j],'Latitude'],main_byid_df.ix[sampleList[i][0][j],
                                                 'Longitude']], fill_color=colorMe(i), radius=6, popup=popup).add_to(feature_group)
@@ -1700,7 +1700,7 @@ def plotFoliumMap(sampleList, main_byid_df, ages, errors, numGrains, plotMapKDE,
                     distArea = vincent.Area(dist[1][i].tolist(), width=400, height=100)
                     distArea.axis_titles(x='Age (Ma)', y='')
                     distArea.legend(title=sampleList[i])
-                    popup = folium.Popup(max_width=600)
+                    popup = folium.Popup(max_width=600, sticky=True)
                     folium.Vega(distArea, height=150, width=500).add_to(popup)
                     folium.RegularPolygonMarker([main_byid_df.ix[sampleList[i],'Latitude'],main_byid_df.ix[sampleList[i],
                                             'Longitude']], fill_color=colorMe(0), radius=6, popup=popup).add_to(feature_group)
@@ -1708,7 +1708,7 @@ def plotFoliumMap(sampleList, main_byid_df, ages, errors, numGrains, plotMapKDE,
                     distLine = vincent.Line(dist[1][i].tolist(), width=400, height=100)
                     distLine.axis_titles(x='Age (Ma)', y='')
                     distLine.legend(title=sampleList[i])
-                    popup = folium.Popup(max_width=600)
+                    popup = folium.Popup(max_width=600, sticky=True)
                     folium.Vega(distLine, height=150, width=500).add_to(popup)
                     folium.RegularPolygonMarker([main_byid_df.ix[sampleList[i],'Latitude'],main_byid_df.ix[sampleList[i],
                                             'Longitude']], fill_color=colorMe(0), radius=6, popup=popup).add_to(feature_group)
