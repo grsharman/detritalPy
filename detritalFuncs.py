@@ -144,6 +144,7 @@ def plotSampleDist(main_byid_df, ID_col = 'Sample_ID', bestAge = 'BestAge', numB
     ax.set_ylabel('Frequency')
     ax.text(0.7, 0.8, s=("Samples:"+str(numSamples)), horizontalalignment='left',verticalalignment='center',transform=ax.transAxes)
     ax.text(0.7, 0.9, s=("Analyses: "+str(sum(numGrains))), horizontalalignment='left',verticalalignment='center',transform=ax.transAxes)
+    
     return
                 
 def sampleToData(sampleList, main_byid_df, sampleLabel='Sample_ID', bestAge='BestAge', bestAgeErr='BestAge_err', sigma='1sigma'):
@@ -1911,7 +1912,10 @@ def MDAtoCSV(sampleList, ages, errors, numGrains, labels, fileName, sortBy, barW
         if makePlot:
             return figMDA
                 
-def MDS(ages, errors, labels, sampleList, metric, plotWidth, plotHeight, plotPie, pieSize, agebins, agebinsc, criteria='Dmax', bw='optimizedFixed', color='Default', main_byid_df=None):
+def MDS(ages, errors, labels, sampleList, metric, plotWidth, plotHeight, plotPie, pieSize, agebins, agebinsc, criteria='Dmax', bw='optimizedFixed', color='Default', main_byid_df=None, n_init=4):
+
+
+
     """
     Create a multi-dimensional scaling (MDS) plot for individual samples or groups of samples.
 
@@ -1970,18 +1974,23 @@ def MDS(ages, errors, labels, sampleList, metric, plotWidth, plotHeight, plotPie
                 matrix[i,j] = calcVmax(CDF[i], CDF[j])
             if criteria == 'R2-PDP' or criteria == 'R2-KDE':
                 matrix[i,j] = calcComplR2(CDF[i], CDF[j])     
-    mds = manifold.MDS(random_state=1, dissimilarity='precomputed', n_init=1)
+
+    mds = manifold.MDS(random_state=1, dissimilarity='precomputed', n_init = n_init)
+    #mds = manifold.MDS(random_state=1, dissimilarity='precomputed', n_init = 1)
     pos = mds.fit(matrix).embedding_
-    posStress = mds.fit(matrix).stress_     
-    nmds = manifold.MDS(metric=False, random_state=1, dissimilarity='precomputed', n_init=1)
-    npos = nmds.fit_transform(matrix, init=pos)
-    nposStress = mds.fit(matrix).stress_ 
+    posStress = mds.fit(matrix).stress_
+
+    nmds = manifold.MDS(metric=False, random_state=1, dissimilarity='precomputed', n_init = n_init)
+    npos = nmds.fit_transform(matrix) #, init=pos)
+    nposStress = mds.fit(matrix).stress_
+    
     if metric:
         m = pos
         stress = posStress
     else:
         m = npos
         stress = nposStress
+    #print(m)
 
     # For coloring by category
     if color != 'Default':
@@ -2021,7 +2030,7 @@ def MDS(ages, errors, labels, sampleList, metric, plotWidth, plotHeight, plotPie
                 ax.plot(m[i][0],m[i][1],'o',label=sampleList[i],color=dicts[main_byid_df.loc[sampleList[i],color]])
                 ax.text(m[i][0]+0.01,m[i][1]+0.01,labels[i])
 
-    return figMDS, stress
+    return matrix, figMDS, stress
 
 def plotDoubleDating(main_byid_df, sampleList, x1, x2, y1, y2, plotKDE, colorKDE, colorKDEbyAge, plotPDP, colorPDP, colorPDPbyAge, plotHist, b, bw, xdif, width, height, savePlot, agebins, agebinsc, coolingAge='ZHe_Age', coolingAgeErr='ZHe_Age_err'):
     """
