@@ -51,7 +51,8 @@ def loadData(samples, analyses, ID_col = 'Sample_ID'):
                 # Make colname if not already in dataframe
                     if colname not in main_byid_df.columns:
                         main_byid_df[colname] = (np.nan*np.empty(shape=(len(main_byid_df),1))).tolist()
-                        main_byid_df[colname] = main_byid_df[colname].astype(np.ndarray)
+                        #main_byid_df[colname] = main_byid_df[colname].astype(np.ndarray)
+                        main_byid_df[colname] = np.asarray(main_byid_df[colname])                       
                     main_byid_df.at[active_sample_id,colname] = active_UPb_data[colname].values
     return main_byid_df
 
@@ -900,7 +901,7 @@ def plotAll_2(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
    
     return fig             
 
-def plotRimsVsCores(main_byid_df, sampleList, ages, errors, labels, x1, x2, y1, y2, plotLog, plotError, w, c, grainIDcol='Grain_ID', rimCoreCol='RimCore', rimID='Rim', coreID='Core', bestAge='BestAge',bestAgeErr='BestAge_err'):
+def plotRimsVsCores(main_byid_df, sampleList, ages, errors, labels, x1=0, x2=4000, y1=0, y2=4000, plotLog=False, plotError=False, w=8, c=8, grainIDcol='Grain_ID', rimCoreCol='RimCore', rimID='Rim', coreID='Core', bestAge='BestAge',bestAgeErr='BestAge_err'):
     """
     Creates a plot of rims versus cores.
 
@@ -1026,7 +1027,10 @@ def plotRimsVsCores(main_byid_df, sampleList, ages, errors, labels, x1, x2, y1, 
 
     return figRimCore
 
-def plotDouble(sampleList, main_byid_df, ages, errors, numGrains, labels, variableName, plotError, variableError, normPlots, plotKDE, colorKDE, colorKDEbyAge, plotPDP, colorPDP, colorPDPbyAge, plotHist, x1, x2, autoScaleY, y1, y2, b, bw, xdif, agebins, agebinsc, w, t, l, plotLog, plotColorBar, plotMovingAverage, windowSize, KDElw=1, PDPlw=1, averageType = 'Mean'):
+def plotDouble(sampleList, main_byid_df, ages, errors, numGrains, labels, variableName, plotError, variableError, normPlots, 
+    plotKDE, colorKDE, colorKDEbyAge, plotPDP, colorPDP, colorPDPbyAge, plotHist, x1, x2, 
+    autoScaleY, y1, y2, b, bw, xdif, agebins, agebinsc, w, t, l, plotLog, plotColorBar, 
+    plotMovingAverage, windowSize, KDElw=1, PDPlw=1, averageType = 'Mean'):
     """
     Creates a figure where a numeric variable is plotted above detrital age distributions for each sample or sample group. Examples could include the uranium concentration (U_ppm), the thorium to uranium ratio (Th_U), the epsilon hafnium value (eHf), or the concentration of a trace element.
 
@@ -1925,7 +1929,7 @@ def MDAtoCSV(sampleList, ages, errors, numGrains, labels, fileName, sortBy, barW
         if makePlot:
             return figMDA
                 
-def MDS(ages, errors, labels, sampleList, metric, plotWidth, plotHeight, plotPie, pieSize, agebins, agebinsc, criteria='Dmax', bw='optimizedFixed', color='Default', main_byid_df=None):
+def MDS(ages, errors, labels, sampleList, metric=False, plotWidth='10', plotHeight='8', plotPie=False, pieSize=0.05, agebins=None, agebinsc=None, criteria='Dmax', bw='optimizedFixed', color='Default', main_byid_df=None, plotLabels=True):
     """
     Create a multi-dimensional scaling (MDS) plot for individual samples or groups of samples.
 
@@ -2025,15 +2029,18 @@ def MDS(ages, errors, labels, sampleList, metric, plotWidth, plotHeight, plotPie
                         y = [0] + np.sin(np.linspace(2*math.pi*histP[j], 2*math.pi*histP[j+1], 100)).tolist()
                         ax.fill(np.array(x)*pieSize+m[i][0],np.array(y)*pieSize+m[i][1],facecolor=agebinsc[j])
 
-            ax.text(m[i][0]+pieSize/1.5,m[i][1]+pieSize/1.5,labels[i])
+            if plotLabels:
+                ax.text(m[i][0]+pieSize/1.5,m[i][1]+pieSize/1.5,labels[i])
             ax.set_aspect('equal')
         else:
             if color == 'Default':
                 ax.plot(m[i][0],m[i][1],'o',label=sampleList[i],color=colorMe(i))
-                ax.text(m[i][0]+0.01,m[i][1]+0.01,labels[i])
+                if plotLabels:
+                    ax.text(m[i][0]+0.01,m[i][1]+0.01,labels[i])
             else:
                 ax.plot(m[i][0],m[i][1],'o',label=sampleList[i],color=dicts[main_byid_df.loc[sampleList[i],color]])
-                ax.text(m[i][0]+0.01,m[i][1]+0.01,labels[i])
+                if plotLabels:
+                    ax.text(m[i][0]+0.01,m[i][1]+0.01,labels[i])
 
     return figMDS, stress
 
