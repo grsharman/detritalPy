@@ -87,7 +87,7 @@ ages, errors, numGrains, labels = dFunc.sampleToData(sampleList, main_byid_df, s
 ```python
 fig = dFunc.plotAll(sampleList, ages, errors, numGrains, labels, x1=0, x2=300)
 ```
-<img src="https://github.com/gsharman/detritalPy/blob/master/DZageDistributions.svg" width="300">
+<img src="https://github.com/grsharman/detritalPy/blob/master/DZageDistributions.svg" width="300">
 
 ### Plot rim age versus core age
 ```python
@@ -95,25 +95,25 @@ sampleList = [(['11-Escanilla','12-Escanilla','10-Sobrarbe','7-Guaso','13-Guaso'
 ages, errors, numGrains, labels = dFunc.sampleToData(sampleList, main_byid_df, sigma = '1sigma');
 rimsVsCores = dFunc.plotRimsVsCores(main_byid_df, sampleList, ages, errors, labels, x1=0, x2=3500, y1=0, y2=3500, plotLog=False, plotError=True, w=8, c=8)
 ```
-<img src="https://github.com/gsharman/detritalPy/blob/master/rimVsCore.svg" width="300">
+<img src="https://github.com/grsharman/detritalPy/blob/master/rimVsCore.svg" width="300">
 
 ### Plot detrital age distributions in comparison to another variable (e.g., Th/U)
 ```python
 figDouble = dFunc.plotDouble(sampleList, main_byid_df, ages, errors, numGrains, labels, variableName='Th_U', plotError=False, variableError=0.05, normPlots=False, plotKDE=False, colorKDE=False, colorKDEbyAge=False, plotPDP=True, colorPDP=False, colorPDPbyAge=True, plotHist=False, x1=0, x2=300, autoScaleY=False, y1=0, y2=2, b=5, bw=10, xdif=1, agebins=[0, 23, 65, 85, 100, 135, 200, 300, 500, 4500], agebinsc=['slategray','royalblue','gold','red','darkred','purple','navy','gray','saddlebrown'], w=10, t=3, l=1, plotLog=False, plotColorBar=False, plotMovingAverage=True, windowSize=25, KDElw=1, PDPlw=1);
 ```
-<img src="https://github.com/gsharman/detritalPy/blob/master/doublePlot.svg" width="300">
+<img src="https://github.com/grsharman/detritalPy/blob/master/doublePlot.svg" width="300">
 
 ### Multi-dimensional scaling
 ```python
 figMDS, stress = dFunc.MDS(ages, errors, labels, sampleList, metric=False, plotWidth=10, plotHeight=8, plotPie=True, pieSize=0.05, agebins=[0, 23, 65, 85, 100, 135, 200, 300, 500, 4500], agebinsc=['slategray','royalblue','gold','red','darkred','purple','navy','gray','saddlebrown'], criteria='Dmax')
 ```
-<img src="https://github.com/gsharman/detritalPy/blob/master/MDSplot.svg" width="300">
+<img src="https://github.com/grsharman/detritalPy/blob/master/MDSplot.svg" width="300">
 
 ### (U-Th)/He vs U-Pb age "double dating" plot
 ```python
 figDoubleDating = dFunc.plotDoubleDating(main_byid_df, sampleList, x1=0, x2=3500, y1=0, y2=500, plotKDE=False, colorKDE=False, colorKDEbyAge=True, plotPDP=True, colorPDP=True, colorPDPbyAge=False, plotHist=False, b=25, bw=10, xdif=1, width=10, height=10, savePlot=True, agebins=[0, 66, 180, 280, 310, 330, 410, 520, 700, 900, 1200, 1500, 3500], agebinsc=['olivedrab','purple','lightskyblue','lightseagreen','lightsteelblue','gold','sandybrown','orange','darkorange','firebrick','orchid','gray']);
 ```
-<img src="https://github.com/gsharman/detritalPy/blob/master/doubleDating.svg" width="300">
+<img src="https://github.com/grsharman/detritalPy/blob/master/doubleDating.svg" width="300">
 
 ## Related publications
 
