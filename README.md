@@ -12,21 +12,21 @@ detritalPy is a Python module for visualizing and analyzing detrital geo-thermoc
 
 Installation of the open data science platform Anaconda by Continuum Analytics will provide most of the required Python modules needed to run detritalPy. The following is a full list of dependencies for all detritalPy functions: 
 
-numpy
-matplotlib   
-pathlib
-csv
-bisect
-folium
-vincent
-simplekml
-scipy
-sklearn
-math
-itertools
-statsmodels
-peakutils
-copy
+* numpy
+* matplotlib
+* pathlib
+* csv
+* bisect
+* folium
+* vincent
+* simplekml
+* scipy
+* sklearn
+* math
+* itertools
+* statsmodels
+* peakutils
+* copy
 
 ## Data Formatting
 
@@ -87,7 +87,7 @@ ages, errors, numGrains, labels = dFunc.sampleToData(sampleList, main_byid_df, s
 ```python
 fig = dFunc.plotAll(sampleList, ages, errors, numGrains, labels, x1=0, x2=300)
 ```
-<img src="https://github.com/grsharman/detritalPy/blob/master/DZageDistributions.svg" width="300">
+<img src="https://github.com/grsharman/detritalPy/blob/master/DZageDistributions.svg" width="900">
 
 ### Plot rim age versus core age
 ```python
