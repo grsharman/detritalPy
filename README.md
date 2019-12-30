@@ -6,7 +6,7 @@
 
 detritalPy is a Python module for visualizing and analyzing detrital geo-thermochronologic data. Designed to be implemented via a Jupyter Notebook, detritalPy aims to provide an efficient means of processing and analyzing large detrital mineral isotopic and geochemical datasets. For more information, please refer to [Sharman et al., 2018](https://doi.org/10.1002/dep2.45).
 
-## Installation (IN PROGRESS)
+## Installation
 
 <code>pip install detritalpy</code>
 
@@ -16,19 +16,13 @@ Installation of the open data science platform Anaconda by Continuum Analytics w
 
 * numpy
 * matplotlib
-* pathlib
-* csv
-* bisect
 * folium
 * vincent
 * simplekml
 * scipy
 * sklearn
-* math
-* itertools
 * statsmodels
 * peakutils
-* copy
 
 ## Data Formatting
 

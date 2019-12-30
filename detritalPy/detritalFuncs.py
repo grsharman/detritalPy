@@ -6,8 +6,6 @@ Created on Sat Feb 18 07:43:18 2017
 """
 #%%
 
-# Version 1.1
-
 ###############################################################
 # Import required modules
 ###############################################################
@@ -2720,9 +2718,8 @@ def KDEcalcAgesLocalAdapt(ages, x1=0, x2=4500, xdif=1, cumulative=False):
     
     Notes
     -----
-    Requires installation of the adaptivekde library.
     """
-    import adaptiveKDE as akde
+    import detritalpy.adaptiveKDE as akde
 
     KDE_age = np.arange(0, 4500+xdif, xdif) # Ensures that the KDE is calculated over all of geologic time
     KDE = np.zeros(shape=(len(ages),len(KDE_age)))
@@ -2761,7 +2758,7 @@ def KDEcalcAgesGlobalAdapt(ages, x1=0, x2=4500, xdif=1, cumulative=False):
     -----
     Requires installation of the adaptivekde library.
     """
-    import adaptiveKDE as akde
+    import detritalpy.adaptiveKDE as akde
 
     KDE_age = np.arange(x1, x2+xdif, xdif)
     KDE = np.zeros(shape=(len(ages),len(KDE_age)))
