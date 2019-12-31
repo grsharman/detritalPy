@@ -2,3 +2,5 @@ __pycache__
 build
 detritalpy.egg-info
 dist
+**_test.ipynb
+**-checkpoint.ipynb
