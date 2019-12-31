@@ -41,7 +41,7 @@ def loadData(samples, analyses, ID_col = 'Sample_ID'):
     main_byid_df = None
     main_byid_df = samples.copy()
     for sample_ind in range(main_byid_df.shape[0]):
-        active_sample_id = main_byid_df.iloc[sample_ind][ID_col]
+        active_sample_id = main_byid_df.loc[sample_ind][ID_col]
         if active_sample_id in analyses.index: # Allows samples to exist without analyses data
             active_UPb_data = analyses.loc[active_sample_id]
             for colname in active_UPb_data:
@@ -87,8 +87,8 @@ def loadDataExcel(dataToPlot, mainSheet = 'Samples', dataSheet = 'ZrUPb', ID_col
         analyses_df = dfs[dataSheet]
     
         for sample_ind in range(main_df.shape[0]): # loop through entries in main_df
-            active_sample_id = main_df.ix[sample_ind,ID_col]
-            active_UPb_data = dfs[dataSheet].ix[dfs[dataSheet][ID_col].isin([active_sample_id]),:]
+            active_sample_id = main_df.loc[sample_ind,ID_col]
+            active_UPb_data = dfs[dataSheet].loc[dfs[dataSheet][ID_col].isin([active_sample_id]),:]
             for colname in active_UPb_data:
                 if colname not in [ID_col]:
                     # Make colname if not already in dataframe
@@ -183,24 +183,24 @@ def sampleToData(sampleList, main_byid_df, sampleLabel='Sample_ID', bestAge='Bes
             sampleAges = []
             sampleErrors = []
             for sample in samples:                             
-                sampleAges = np.append(sampleAges, main_byid_df.ix[sample, bestAge])
+                sampleAges = np.append(sampleAges, main_byid_df.loc[sample, bestAge])
                 if sigma == '2sigma':
-                    sampleErrors = np.append(sampleErrors, main_byid_df.ix[sample, bestAgeErr]/2)
+                    sampleErrors = np.append(sampleErrors, main_byid_df.loc[sample, bestAgeErr]/2)
                 else:
-                    sampleErrors = np.append(sampleErrors, main_byid_df.ix[sample, bestAgeErr])                
+                    sampleErrors = np.append(sampleErrors, main_byid_df.loc[sample, bestAgeErr])                
             ages.append(sampleAges)
             errors.append(sampleErrors)
             numGrains.append(len(sampleAges))
             labels.append(sampleList[i][1])
     else:
         for sample in sampleList:
-            ages.append(main_byid_df.ix[sample, bestAge])
+            ages.append(main_byid_df.loc[sample, bestAge])
             if sigma == '2sigma':
-                errors.append(main_byid_df.ix[sample, bestAgeErr]/2.)
+                errors.append(main_byid_df.loc[sample, bestAgeErr]/2.)
             else:
-                errors.append(main_byid_df.ix[sample, bestAgeErr])
-            numGrains.append(len(main_byid_df.ix[sample, bestAge]))
-            labels.append(main_byid_df.ix[sample,sampleLabel])
+                errors.append(main_byid_df.loc[sample, bestAgeErr])
+            numGrains.append(len(main_byid_df.loc[sample, bestAge]))
+            labels.append(main_byid_df.loc[sample,sampleLabel])
 
     return ages, errors, numGrains, labels
 
@@ -232,11 +232,11 @@ def sampleToVariable(sampleList, main_byid_df, variableName):
             samples = sampleList[i][0]
             sampleVariables = []
             for sample in samples:
-                sampleVariables = np.append(sampleVariables, main_byid_df.ix[sample, variableName])
+                sampleVariables = np.append(sampleVariables, main_byid_df.loc[sample, variableName])
             variable.append(sampleVariables)
     else:
         for sample in sampleList:
-            variable.append(main_byid_df.ix[sample, variableName])
+            variable.append(main_byid_df.loc[sample, variableName])
 
     return variable
 
@@ -974,16 +974,16 @@ def plotRimsVsCores(main_byid_df, sampleList, ages, errors, labels, x1=0, x2=400
         if type(sampleList[0])==tuple:
             c = 0 # Counter variable used to ensure that the label is only plotted once per sample group
             for j in range(len(sampleList[i][0])): # One loop for each sample in each group
-                for k in range(len(main_byid_df.ix[sampleList[i][0][j],bestAge])): # One loop for each analysis in each sample
-                    grainID = main_byid_df.ix[sampleList[i][0][j],grainIDcol][k]
+                for k in range(len(main_byid_df.loc[sampleList[i][0][j],bestAge])): # One loop for each analysis in each sample
+                    grainID = main_byid_df.loc[sampleList[i][0][j],grainIDcol][k]
                     if not grainID in rimVsCore:
                         rimVsCore[grainID] = [None, None, None, None]
-                    if main_byid_df.ix[sampleList[i][0][j],rimCoreCol][k] == rimID:
-                        rimVsCore[grainID][0] = main_byid_df.ix[sampleList[i][0][j],bestAge][k]
-                        rimVsCore[grainID][1] = main_byid_df.ix[sampleList[i][0][j],bestAgeErr][k]
-                    elif main_byid_df.ix[sampleList[i][0][j],rimCoreCol][k] == coreID:
-                        rimVsCore[grainID][2] = main_byid_df.ix[sampleList[i][0][j],bestAge][k]
-                        rimVsCore[grainID][3] = main_byid_df.ix[sampleList[i][0][j],bestAgeErr][k]            
+                    if main_byid_df.loc[sampleList[i][0][j],rimCoreCol][k] == rimID:
+                        rimVsCore[grainID][0] = main_byid_df.loc[sampleList[i][0][j],bestAge][k]
+                        rimVsCore[grainID][1] = main_byid_df.loc[sampleList[i][0][j],bestAgeErr][k]
+                    elif main_byid_df.loc[sampleList[i][0][j],rimCoreCol][k] == coreID:
+                        rimVsCore[grainID][2] = main_byid_df.loc[sampleList[i][0][j],bestAge][k]
+                        rimVsCore[grainID][3] = main_byid_df.loc[sampleList[i][0][j],bestAgeErr][k]            
                 for grain in list(rimVsCore):
                     if rimVsCore[grain][0] is None or rimVsCore[grain][2] is None:
                         del rimVsCore[grain]
@@ -995,15 +995,15 @@ def plotRimsVsCores(main_byid_df, sampleList, ages, errors, labels, x1=0, x2=400
                     c = c+1        
         else:
             for j in range(len(ages[i])): # One loop for analysis
-                grainID = main_byid_df.ix[sampleList[i],grainIDcol][j]
+                grainID = main_byid_df.loc[sampleList[i],grainIDcol][j]
                 if not grainID in rimVsCore:
                     rimVsCore[grainID] = [None, None, None, None]
-                if main_byid_df.ix[sampleList[i],rimCoreCol][j] == rimID:
-                    rimVsCore[grainID][0] = main_byid_df.ix[sampleList[i],bestAge][j]
-                    rimVsCore[grainID][1] = main_byid_df.ix[sampleList[i],bestAgeErr][j]
-                elif main_byid_df.ix[sampleList[i],rimCoreCol][j] == coreID:
-                    rimVsCore[grainID][2] = main_byid_df.ix[sampleList[i],bestAge][j]
-                    rimVsCore[grainID][3] = main_byid_df.ix[sampleList[i],bestAgeErr][j]            
+                if main_byid_df.loc[sampleList[i],rimCoreCol][j] == rimID:
+                    rimVsCore[grainID][0] = main_byid_df.loc[sampleList[i],bestAge][j]
+                    rimVsCore[grainID][1] = main_byid_df.loc[sampleList[i],bestAgeErr][j]
+                elif main_byid_df.loc[sampleList[i],rimCoreCol][j] == coreID:
+                    rimVsCore[grainID][2] = main_byid_df.loc[sampleList[i],bestAge][j]
+                    rimVsCore[grainID][3] = main_byid_df.loc[sampleList[i],bestAgeErr][j]            
             for grain in list(rimVsCore):
                 if rimVsCore[grain][0] is None or rimVsCore[grain][2] is None:
                     del rimVsCore[grain]
@@ -1533,20 +1533,20 @@ def plotFoliumMap(sampleList, main_byid_df, ages, errors, numGrains, plotMapKDE,
         count = 0
         for i in range(len(sampleList)):
             for j in range(len(sampleList[i][0])):
-                if not isNaN(main_byid_df.ix[sampleList[i][0][j],'Latitude']):
-                    latitudes[count] = main_byid_df.ix[sampleList[i][0][j],'Latitude']
+                if not isNaN(main_byid_df.loc[sampleList[i][0][j],'Latitude']):
+                    latitudes[count] = main_byid_df.loc[sampleList[i][0][j],'Latitude']
                     latitudes.astype(float)
-                    longitudes[count] = float(main_byid_df.ix[sampleList[i][0][j],'Longitude'])
+                    longitudes[count] = float(main_byid_df.loc[sampleList[i][0][j],'Longitude'])
                     longitudes.astype(float)
                     count = count+1
     else:
         latitudes = np.empty(shape=(len(sampleList),1))
         longitudes = np.empty(shape=(len(sampleList),1))
         for i in range(len(sampleList)):
-            if not isNaN(main_byid_df.ix[sampleList[i],'Latitude']):
-                latitudes[i] = main_byid_df.ix[sampleList[i],'Latitude']
+            if not isNaN(main_byid_df.loc[sampleList[i],'Latitude']):
+                latitudes[i] = main_byid_df.loc[sampleList[i],'Latitude']
                 latitudes.astype(float)
-                longitudes[i] = float(main_byid_df.ix[sampleList[i],'Longitude'])
+                longitudes[i] = float(main_byid_df.loc[sampleList[i],'Longitude'])
                 longitudes.astype(float)
     latRange = latitudes.max()-latitudes.min()
     longRange = longitudes.max()-longitudes.min()
@@ -1651,7 +1651,7 @@ def plotFoliumMap(sampleList, main_byid_df, ages, errors, numGrains, plotMapKDE,
             if (not plotMapKDE and not plotMapPDP and plotCumulative):
                 dist = CDFcalcAges(ages, x1=0, x2=x2, xdif=1)        
             for j in range(len(sampleList[i][0])): # Loop for each sample within each group
-                if not isNaN(main_byid_df.ix[sampleList[i][0][j],'Latitude']):
+                if not isNaN(main_byid_df.loc[sampleList[i][0][j],'Latitude']):
                     if ((plotMapKDE or plotMapPDP) and not plotCumulative):
                         distArea = vincent.Area(dist[1][j].tolist(), width=width, height=height)
                         distArea.axis_titles(x='Age (Ma)', y='')
@@ -1661,7 +1661,7 @@ def plotFoliumMap(sampleList, main_byid_df, ages, errors, numGrains, plotMapKDE,
                         else:
                             popup = folium.Popup(max_width=600)
                         folium.Vega(distArea, height=int(height*1.5), width=int(width*1.25)).add_to(popup)
-                        folium.RegularPolygonMarker([main_byid_df.ix[sampleList[i][0][j],'Latitude'],main_byid_df.ix[sampleList[i][0][j],
+                        folium.RegularPolygonMarker([main_byid_df.loc[sampleList[i][0][j],'Latitude'],main_byid_df.loc[sampleList[i][0][j],
                                                 'Longitude']], fill_color=colorMe(i), radius=6, popup=popup).add_to(feature_group)
                     if (plotCumulative):
                         distLine = vincent.Line(dist[1][j].tolist(), width=width, height=height)
@@ -1672,14 +1672,14 @@ def plotFoliumMap(sampleList, main_byid_df, ages, errors, numGrains, plotMapKDE,
                         else:
                             popup = folium.Popup(max_width=600)
                         folium.Vega(distLine, height=int(height*1.5), width=int(width*1.25)).add_to(popup)
-                        folium.RegularPolygonMarker([main_byid_df.ix[sampleList[i][0][j],'Latitude'],main_byid_df.ix[sampleList[i][0][j],
+                        folium.RegularPolygonMarker([main_byid_df.loc[sampleList[i][0][j],'Latitude'],main_byid_df.loc[sampleList[i][0][j],
                                                 'Longitude']], fill_color=colorMe(i), radius=6, popup=popup).add_to(feature_group)
                     if (not (plotMapKDE or plotMapPDP or plotCumulative)):
-                        folium.RegularPolygonMarker([main_byid_df.ix[sampleList[i][0][j],'Latitude'],main_byid_df.ix[sampleList[i][0][j],
+                        folium.RegularPolygonMarker([main_byid_df.loc[sampleList[i][0][j],'Latitude'],main_byid_df.loc[sampleList[i][0][j],
                                                 'Longitude']], fill_color=colorMe(i), radius=6, popup=sampleList[i][0][j]).add_to(feature_group)
                     feature_group.add_to(m)
                     if exportKML:
-                        pnt = kml.newpoint(name=sampleList[i][0][j], description=main_byid_df.ix[sampleList[i][0][j],descrpt],coords=[(main_byid_df.ix[sampleList[i][0][j],'Longitude'],main_byid_df.ix[sampleList[i][0][j],'Latitude'])])
+                        pnt = kml.newpoint(name=sampleList[i][0][j], description=main_byid_df.loc[sampleList[i][0][j],descrpt],coords=[(main_byid_df.loc[sampleList[i][0][j],'Longitude'],main_byid_df.loc[sampleList[i][0][j],'Latitude'])])
                         pnt.style = style
         folium.LayerControl().add_to(m)
     else:
@@ -1705,7 +1705,7 @@ def plotFoliumMap(sampleList, main_byid_df, ages, errors, numGrains, plotMapKDE,
             dist = CDFcalcAges(ages, x1=0, x2=x2, xdif=1)
         feature_group = folium.FeatureGroup(name='Samples')
         for i in range(len(sampleList)):
-            if not isNaN(main_byid_df.ix[sampleList[i],'Latitude']):
+            if not isNaN(main_byid_df.loc[sampleList[i],'Latitude']):
                 if ((plotMapKDE or plotMapPDP) and not plotCumulative):
                     distArea = vincent.Area(dist[1][i].tolist(), width=width, height=height)
                     distArea.axis_titles(x='Age (Ma)', y='')
@@ -1715,7 +1715,7 @@ def plotFoliumMap(sampleList, main_byid_df, ages, errors, numGrains, plotMapKDE,
                     else:
                         popup = folium.Popup(max_width=600)
                     folium.Vega(distArea, height=int(height*1.5), width=int(width*1.25)).add_to(popup)
-                    folium.RegularPolygonMarker([main_byid_df.ix[sampleList[i],'Latitude'],main_byid_df.ix[sampleList[i],
+                    folium.RegularPolygonMarker([main_byid_df.loc[sampleList[i],'Latitude'],main_byid_df.loc[sampleList[i],
                                             'Longitude']], fill_color=colorMe(0), radius=6, popup=popup).add_to(feature_group)
                 if (plotCumulative):
                     distLine = vincent.Line(dist[1][i].tolist(), width=width, height=height)
@@ -1726,13 +1726,13 @@ def plotFoliumMap(sampleList, main_byid_df, ages, errors, numGrains, plotMapKDE,
                     else:
                         popup = folium.Popup(max_width=600)
                     folium.Vega(distLine, height=int(height*1.5), width=int(width*1.25)).add_to(popup)
-                    folium.RegularPolygonMarker([main_byid_df.ix[sampleList[i],'Latitude'],main_byid_df.ix[sampleList[i],
+                    folium.RegularPolygonMarker([main_byid_df.loc[sampleList[i],'Latitude'],main_byid_df.loc[sampleList[i],
                                             'Longitude']], fill_color=colorMe(0), radius=6, popup=popup).add_to(feature_group)
                 if (not (plotMapKDE or plotMapPDP or plotCumulative)):
-                    folium.RegularPolygonMarker([main_byid_df.ix[sampleList[i],'Latitude'],main_byid_df.ix[sampleList[i],
+                    folium.RegularPolygonMarker([main_byid_df.loc[sampleList[i],'Latitude'],main_byid_df.loc[sampleList[i],
                                             'Longitude']], fill_color=colorMe(0), radius=6, popup=sampleList[i]).add_to(feature_group)
                 if exportKML:
-                    pnt = kml.newpoint(name=sampleList[i], description=main_byid_df.ix[sampleList[i],descrpt],coords=[(main_byid_df.ix[sampleList[i],'Longitude'],main_byid_df.ix[sampleList[i],'Latitude'])])
+                    pnt = kml.newpoint(name=sampleList[i], description=main_byid_df.loc[sampleList[i],descrpt],coords=[(main_byid_df.loc[sampleList[i],'Longitude'],main_byid_df.loc[sampleList[i],'Latitude'])])
                     pnt.style = style
         feature_group.add_to(m)
         folium.LayerControl().add_to(m)
@@ -2719,12 +2719,12 @@ def KDEcalcAgesLocalAdapt(ages, x1=0, x2=4500, xdif=1, cumulative=False):
     Notes
     -----
     """
-    import detritalpy.adaptiveKDE as akde
+    import adaptiveKDE as akde
 
     KDE_age = np.arange(0, 4500+xdif, xdif) # Ensures that the KDE is calculated over all of geologic time
     KDE = np.zeros(shape=(len(ages),len(KDE_age)))
     for i in range(len(ages)):
-        kde = akde.sskernel(np.asarray(ages[i]), tin=KDE_age, nbs=int(1e3))[0]
+        kde = akde.sskernel(np.asarray(ages[i]), tin=KDE_age)[0]
         if cumulative:
             kde = np.cumsum(kde)*xdif # Seems like this must be multiplied by xdif for it to work
         KDE[i,:] = kde
