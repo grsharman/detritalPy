@@ -1,6 +1,4 @@
-<p align="center">
-<img src="https://github.com/grsharman/detritalPy/blob/master/detritalPy_logo.svg" width="300">
-</p>
+![detritalPy-logo][https://github.com/grsharman/detritalPy/blob/master/detritalPy_logo.svg]
 
 ## Description
 
