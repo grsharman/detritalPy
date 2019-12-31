@@ -1,4 +1,6 @@
-![detritalPy-logo](https://github.com/grsharman/detritalPy/blob/master/detritalPy_logo.svg =300x)
+<p align="center">
+<img src="https://github.com/grsharman/detritalPy/blob/master/detritalPy_logo.svg" width="300">
+</p>
 
 ## Description
 
@@ -87,8 +89,7 @@ ages, errors, numGrains, labels = dFunc.sampleToData(sampleList, main_byid_df, s
 ```python
 fig = dFunc.plotAll(sampleList, ages, errors, numGrains, labels, x1=0, x2=300)
 ```
-
-![DZageDistributions=](https://github.com/grsharman/detritalPy/blob/master/DZageDistributions.svg)
+<img src="https://github.com/grsharman/detritalPy/blob/master/DZageDistributions.svg" width="900">
 
 ### Plot rim age versus core age
 ```python
