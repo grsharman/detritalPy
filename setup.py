@@ -5,7 +5,7 @@ with open('/Users/gsharman/Box/detritalPy/pip_installation/README.md', "r") as f
 
 setuptools.setup(
     name="detritalpy",
-    version="1.2.0",
+    version="1.2.1",
     author="Glenn Sharman",
     author_email="gsharman@uark.edu",
     description="A Python-based toolset for visualizing and analyzing detrital geo-thermochronologic data",
@@ -16,7 +16,7 @@ setuptools.setup(
     packages=['detritalpy'],
     scripts=['/Users/gsharman/Box/detritalPy/detritalPy/detritalPy/detritalFuncs.py',
              '/Users/gsharman/Box/detritalPy/detritalPy/detritalPy/adaptiveKDE.py'],
-    install_requires=['numpy','matplotlib','pathlib','pandas','folium','vincent','simplekml',
+    install_requires=['numpy','matplotlib','pandas','xlrd','folium','vincent','simplekml',
         'scipy','sklearn','statsmodels','peakutils'],
     classifiers=[
         "Programming Language :: Python :: 3",

@@ -10,12 +10,18 @@ detritalPy is a Python module for visualizing and analyzing detrital geo-thermoc
 
 <code>pip install detritalpy</code>
 
+## Upgrading
+
+<code>pip install detritalpy --upgrade</code>
+
 ## Requirements
 
 Installation of the open data science platform Anaconda by Continuum Analytics will provide most of the required Python modules needed to run detritalPy. The following is a full list of dependencies for all detritalPy functions: 
 
 * numpy
 * matplotlib
+* pandas
+* xlrd
 * folium
 * vincent
 * simplekml
