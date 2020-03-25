@@ -121,7 +121,9 @@ figDoubleDating = dFunc.plotDoubleDating(main_byid_df, sampleList, x1=0, x2=3500
 
 If you find this code helpful in your research, please cite the accompanying article published in the Depositional Record.
 
-Sharman GR, Sharman JP, Sylvester Z. detritalPy: A Python-based Toolset for Visualizing and Analyzing Detrital Geo-Thermochronologic Data. 2018. [https://doi.org/10.1002/dep2.45](https://doi.org/10.1002/dep2.45).
+Sharman G.R., Sharman J.P., and Sylvester Z., 2018, detritalPy: A Python-based toolset for visualizing and analyzing detrital geo-thermochronologic Ddata: The Depositional Record, v. 4, p. 202-215, [https://doi.org/10.1002/dep2.45](https://doi.org/10.1002/dep2.45).
+
+Code for maximum depositional age (MDA) calculations was first presented in Sharman, G.R., and Malkowski, M.A., 2020, Needles in a haystack: Detrital zircon UPb ages and the maximum depositional age of modern global sediment: Earth-Science Reviews, v. 203, [doi:10.1016/j.earscirev.2020.103109](https://doi.org/10.1016/j.earscirev.2020.103109).
 
 ## License
 
