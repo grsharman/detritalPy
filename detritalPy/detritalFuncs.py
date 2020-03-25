@@ -1927,6 +1927,401 @@ def MDAtoCSV(sampleList, ages, errors, numGrains, labels, fileName, sortBy, barW
 
         if makePlot:
             return figMDA
+
+class MDS_class:
+    """
+    This is a class that computes multidimensional scaling (MDS) for distributive data (e.g., detrital zircon U-Pb age distributions)
+
+    Required Parameters
+    ----------
+    ages : array of ages for each sample or sample group. Output from sampleToData()
+    errors : array of errors for each sample or sample group. Output from sampleToData()
+    labels : array of labels for each sample or sample group. Output from sampleToData()
+    sampleList : array of sample IDs.
+        Must be in form for individual samples: ['Sample1', 'Sample2', . . . , etc.].
+        Must be in the form for groups of samples: [(['Sample1','Sample2', . . . , etc.], 'Group 1 name'),
+                                                    (['Sample1','Sample2', . . . , etc.], 'Group 2 name')]
+
+    Optional Paramters
+    ----------    
+    metric : set to False for non-metric MDS or set to True for metric MDS (default is False). Non-metric MDS is recommended (Vermeesch, 2013)
+    criteria : similiarty metric used in the MDS calculation. Options: 'Vmax', 'Dmax', 'R2-PDP', 'R2-KDE' (default is 'Vmax')
+    bw : KDE bandwidth. Options are 'optimizedFixed', 'optimizedVariable', or a number (bandwidth in Myr) (default is 'optimizedFixed')
+    n_init : the number of initializations used in the MDS calculation. The final answer will be the initialation that results in the lowest stress value (default = 1000)
+    max_iter : the maximum number of iterations the MDS algorthm will run for a given initialization (default = 1000)
+    x1 : lower limit (Myr) of age distribution to conduct MDS analysis on (default = 0)
+    x2 : upper limit (Myr) of age distribution to conduct MDS analysis on (default = 4500)
+    xdif : interval (Myr) over which distributions are calculated (default = 1)
+    min_dim : the minimum number of dimensions over which to calculate MDS (default = 1)
+    max_dim : the maximum number of dimensions over which to calculate MDS (default = 3)
+    dim : the chosen number of dimensions to plot (default = 2)
+
+    Notes
+    -----
+    See Vermeesch (2013): Chemical Geology (https://doi.org/10.1016/j.chemgeo.2013.01.010) and the documentation of sklearn.manifold.MDS for more information on multidimensional scaling
+
+    """
+    def __init__(self, ages, errors, labels, sampleList, metric=False, criteria='Vmax', bw='optimizedFixed', n_init=1000, max_iter=1000, x1=0, x2=4500, xdif=1, min_dim=1, max_dim=3, dim=2):
+        # Import required modules
+        from scipy import stats
+        from sklearn import manifold
+
+        # Define variables
+        self.ages = ages
+        self.errors = errors
+        self.labels = labels
+        self.sampleList = sampleList
+        self.metric = metric
+        self.criteria = criteria
+        self.bw = bw
+        self.n_init = n_init
+        self.max_iter = max_iter
+
+        # Calculate the distributions from which to compute the difference matrix
+        if self.criteria == 'Dmax' or self.criteria == 'Vmax':
+            self.CDF = CDFcalcAges(self.ages)[1]
+
+        if self.criteria == 'R2-PDP':
+            self.PDP = PDPcalcAges(ages=self.ages, errors=self.errors, x1=x1, x2=x2, xdif=xdif, cumulative=False)[1]
+        if self.criteria == 'R2-KDE':
+            if bw == 'optimizedFixed':
+                self.KDE = KDEcalcAgesLocalAdapt(ages=self.ages, x1=x1, x2=x2, xdif=xdif, cumulative=False)[1]
+            if bw == 'optimizedVariable':
+                self.KDE = KDEcalcAgesGlobalAdapt(ages=self.ages, x1=x1, x2=x2, xdif=xdif, cumulative=False)[1]
+            if type(bw) != str:
+                self.KDE = KDEcalcAges_2(ages=self.ages, x1=x1, x2=x2, xdif=xdif, cumulative=False)[1]
+
+        # Calculate the difference matrix
+        self.matrix = np.empty(shape=(len(self.ages),len(self.ages))) # Empty matrix of appropriate shape
+        for i in range(len(self.ages)):
+            for j in range(len(self.ages)):
+                if self.criteria == 'Dmax':
+                    self.matrix[i,j] = stats.ks_2samp(self.ages[i],self.ages[j])[0]
+                if self.criteria == 'Vmax':
+                    self.matrix[i,j] = calcVmax(self.CDF[i], self.CDF[j])
+                if self.criteria == 'R2-PDP':
+                    self.matrix[i,j] = calcComplR2(self.PDP[i], self.PDP[j])
+                if self.criteria == 'R2-KDE':
+                    self.matrix[i,j] = calcComplR2(self.KDE[i], self.KDE[j])
+        self.min_dim = min_dim
+        self.max_dim = max_dim
+        self.dim = dim
+        self.stressArray = []
+        self.mArray = []
+        self.distancesArray = []
+        self.y_distancesArray = []
+        self.x_dissimilarityArray = []
+        self.stress1Array = []
+
+        # Loop through and perform MDS for each number of dimensions considered
+        for i in range(max_dim-min_dim+1):
+            if self.metric: # Metric or classical MDS
+                mds = manifold.MDS(n_components = min_dim+i, random_state=1, dissimilarity='precomputed', n_init = self.n_init, max_iter= self.max_iter)
+                m = mds.fit_transform(self.matrix)
+                stress = mds.fit(self.matrix).stress_
+            else: # Non-metric MDS
+                mds = manifold.MDS(n_components = min_dim+i, metric=False, random_state=1, dissimilarity='precomputed', n_init = self.n_init, max_iter= self.max_iter)
+                m = mds.fit_transform(self.matrix) #, init=pos)
+                stress = mds.fit(self.matrix).stress_
+            self.stressArray.append(stress)
+            self.mArray.append(m)
+
+        # Loop through and make calculations for each number of dimensions considered
+        for h in range(max_dim-min_dim+1):
+            self.distances = np.empty(shape=(len(self.ages),len(self.ages)))
+            for i in range(len(self.ages)):
+                for j in range(len(self.ages)):
+                    self.distances[i,j] = np.linalg.norm(self.mArray[h][i]-self.mArray[h][j])
+            self.distancesArray.append(self.distances)
+            self.y_distances = []
+            self.x_dissimilarity = []
+            for i in range(len(self.ages)):
+                for j in range(len(self.ages)-1):
+                    if j>=i:
+                        continue
+                    else:
+                        self.y_distances.append(self.distances[i,j])
+                        self.x_dissimilarity.append(self.matrix[i,j])
+            self.y_distancesArray.append(self.y_distances)
+            self.x_dissimilarityArray.append(self.x_dissimilarity)
+
+            # Calculate the Stres-1 of Kruskal (1964)
+            for i in range(len(self.x_dissimilarity)):
+                S1_numerator = []
+                S1_denominator = []
+                for i in range(len(self.x_dissimilarity)):
+                    S1_numerator.append(((self.x_dissimilarity[i]-self.y_distances[i])**2))
+                    S1_denominator.append(self.y_distances[i]**2)
+            self.stress1Array.append(np.sqrt(np.sum(S1_numerator)/np.sum(S1_denominator)))
+
+    def QQplot(self, figsize=(10,10), savePlot=True, fileName='QQplot.pdf', halfMatrix=True):
+            """
+            This function creates a QQ plot that illustrates a comparison of sample-to-sample CDFs
+
+            Required Parameters
+            ----------
+            self
+
+            Optional Paramters
+            ----------    
+            figsize : dimensions of the figure as a tuple (default = (10,10))
+            savePlot : set to True to create a PDF of the plot in the Output folder (default = True)
+            fileName : name of the file being saved, if savePlot == True (default = 'QQplot.pdf')
+            halfMatrix : set to True to only plot half of the matrix (default = True)
+
+            Notes
+            -----
+            """
+
+        figQQ, ax = plt.subplots(len(self.ages),len(self.ages), figsize=figsize)
+
+        for i in range(len(self.ages)):
+            for j in range(len(self.ages)):
+                if (halfMatrix and j>i):
+                    ax[i,j].axis('off')
+                    continue                       
+                else:
+                    if (self.criteria == 'R2-PDP'):
+                        ax[i,j].plot(np.cumsum(self.PDP[i]),np.cumsum(self.PDP[j]),'-',color='red')
+                    if (self.criteria == 'R2-KDE'):
+                        ax[i,j].plot(np.cumsum(self.KDE[i]),np.cumsum(self.KDE[j]),'-',color='red')
+                    else:
+                        ax[i,j].plot(self.CDF[i],self.CDF[j],'-',color='red')
+                    ax[i,j].plot([0,1],[0,1],'--',color='black')
+                    ax[i,j].get_xaxis().set_ticks([])
+                    ax[i,j].get_yaxis().set_ticks([])
+                    ax[i,j].set_frame_on(True)
+                    ax[i,j].grid()
+                    if i == len(self.ages)-1:
+                        ax[i,j].set_xlabel(self.sampleList[j], rotation='vertical')
+                    if j == 0:
+                        ax[i,j].set_ylabel(self.sampleList[i], rotation='horizontal', ha='right')
+
+        if savePlot:
+            pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
+            figQQ.savefig('Output/'+fileName)
+
+        figQQ.subplots_adjust(wspace=0)
+        figQQ.subplots_adjust(hspace=0)
+
+    def heatMap(self, figsize=(10,10), savePlot=True, fileName='HeatMapPlot.pdf', plotValues=True):
+        """
+        This function creates a heatmap of dissimilarity values used in the MDS calculation
+
+        Required Parameters
+        ----------
+        self
+
+        Optional Paramters
+        ----------    
+        figsize : dimensions of the figure as a tuple (default = (10,10))
+        savePlot : set to True to create a PDF of the plot in the Output folder (default = True)
+        fileName : name of the file being saved, if savePlot == True (default = 'HeatMapPlot.pdf')
+        plotValues : set to True to plot dissimilarity values on the heatmap
+
+        Notes
+        -----
+        """
+
+        figHeatMap, ax = plt.subplots(figsize=(10,10))
+        im = ax.imshow(self.matrix, cmap='Reds', vmin=0, vmax=1)
+        ax.set_xticks(np.arange(len(self.sampleList)))
+        ax.set_yticks(np.arange(len(self.sampleList)))
+        ax.set_xticklabels(self.sampleList)
+        ax.set_yticklabels(self.sampleList)
+        cbar = figHeatMap.colorbar(im)
+        cbar.set_label(label=self.criteria)
+        if plotValues:
+            for i in range(len(self.ages)):
+                for j in range(len(self.ages)):
+                    text = ax.text(j, i, np.round(self.matrix[i,j], decimals=2), ha='center', va='center')
+        # Rotate the tick labels and set their alignment.
+        plt.setp(ax.get_xticklabels(), rotation=90, ha="right",
+                 rotation_mode="anchor")
+        if savePlot:
+            pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
+            figHeatMap.savefig('Output/'+fileName)
+
+    def stressPlot(self, figsize=(10,10), savePlot=True, fileName='stressPlot.pdf', stressType='Stress-1'):
+        """
+        This function creates a plot of stress vs number of dimensions
+
+        Required Parameters
+        ----------
+        self
+
+        Optional Paramters
+        ----------    
+        figsize : dimensions of the figure as a tuple (default = (10,10))
+        savePlot : set to True to create a PDF of the plot in the Output folder (default = True)
+        fileName : name of the file being saved, if savePlot == True (default = 'stressPlot.pdf')
+        stressType : Set to 'sklearn' to use the stress as calculated by the sklearn.Manifold.MDS 
+                    module: "The final value of the stress (sum of squared distance of the disparities and the distances for all constrained points)".
+                    Set to 'Stress-1' to calculate the stress following Kruskal (1964) - see Vermeesch (2013): Chemical Geology. (default = 'Stress-1')
+
+        Notes
+        -----
+        """
+
+        if len(self.stressArray) == 1:
+            print('Only one dimension modeled! Cannot plot stress vs number of dimensions')
+        else:
+            figStress, ax = plt.subplots()
+            if stressType == 'sklearn':
+                ax.plot(np.arange(self.max_dim)+1, self.stressArray,'o', markerfacecolor='white', markeredgecolor='black')
+                ax.plot(np.arange(self.max_dim)+1, self.stressArray, '-', color='black')
+                ax.set_ylabel('Final stress (the sum of squared distance of the disparities \nand the distances for all constrained points)')
+            if stressType == 'Stress-1':
+                ax.plot(np.arange(self.max_dim)+1, self.stress1Array,'o', markerfacecolor='white', markeredgecolor='black')
+                ax.plot(np.arange(self.max_dim)+1, self.stress1Array, '-', color='black')
+                ax.set_ylabel('Stress-1 (Kruskal, 1964)')
+            ax.set_xlim(min(np.arange(self.max_dim)+1), max(np.arange(self.max_dim)+1))
+
+            ax.set_xlabel('Number of dimensions')
+            if savePlot:
+                pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
+                figStress.savefig('Output/'+fileName)
+
+    def shepardPlot(self, figsize=(10,10), savePlot=True, fileName='shepardPlot.pdf', plotOneToOneLine=False, equalAspect=False):  # Make a Shepard plot
+        """
+        This function creates a plot of euclidean distance (i.e., sample-to-sample distance on the MDS plot) versus dissimilarity value. 
+        Samples that are similar should be closer together than samples that are more different.
+
+        Required Parameters
+        ----------
+        self
+
+        Optional Paramters
+        ----------    
+        figsize : dimensions of the figure as a tuple (default = (10,10))
+        savePlot : set to True to create a PDF of the plot in the Output folder (default = True)
+        fileName : name of the file being saved, if savePlot == True (default = 'shepardPlot.pdf')
+        plotOneToOneLine : set to True to plot a 1:1 line (default = False)
+        equalAspect : set to True to display y- and x-axes at the same scale (default = False)
+                    
+        Notes
+        -----
+        """
+
+        figShepard, ax = plt.subplots()
+
+        if plotOneToOneLine:
+            ax.plot([0,1],[0,1],'--', color='black')
+        ax.plot(self.x_dissimilarity, self.y_distances, 'o', markerfacecolor='white', markeredgecolor='black')
+        ax.set_xlim(0,)
+        ax.set_ylim(0,)
+        ax.set_ylabel('Distance')
+        ax.set_xlabel('Dissimilarity')
+        if equalAspect:
+            ax.set_aspect('equal')
+        if savePlot:
+            pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
+            figShepard.savefig('Output/'+fileName)
+
+    def MDSplot(self, figsize=(10,10), savePlot=True, fileName='MDSplot.pdf', plotPie=False, pieSize=0.05, agebins=None, agebinsc=None, pieType='Age', 
+        pieCategories=None, df=None, axes=None, colorBy='Default', plotLabels=True, equalAspect=True):
+        """
+        Plot the results of the MDS analysis
+
+        Required Parameters
+        ----------
+        self
+
+        Optional Paramters
+        ----------    
+        figsize : dimensions of the figure as a tuple (default = (10,10))
+        savePlot : set to True to create a PDF of the plot in the Output folder (default = True)
+        fileName : name of the file being saved, if savePlot == True (default = 'MDSplot.pdf')
+        plotPie : set to True to plot pie diagrams (default = False)
+        pieSize : set to a value (float) to specify pie size (default = 0.05)
+        agebins : used to define age categories for pie plots (default = None)
+        agebinsc : used to define colors of age categories used for pie plots (default = None)
+        pieType : specify type of information to use in plotting pies (default = 'Age')
+        pieCategories : specifiy categories to use in pie diagrams, if pieType != 'Age' (default is None)
+        df : Pandas DataFrame that contains pie plot data, if pieType != Age (default = None)
+        axes : array of shape 2,2 with x- and y-axis minimum and maximum values (default = None)
+        colorBy : specify category to color sample locations by (default = 'Default')
+        plotLabels : set to True to plot sample labels (default = True)
+        equalAspect : set to True to display y- and x-axes at the same scale (default = False)
+                    
+        Notes
+        -----
+        """
+
+        import math
+
+        self.plotPie = plotPie
+        self.pieSize = pieSize
+        self.agebins = agebins
+        self.agebinsc = agebinsc
+        self.pieType = pieType
+        self.pieCategories = pieCategories
+        self.df = df
+        self.axes = axes
+        self.colorBy = colorBy
+
+        figMDS, ax = plt.subplots(1, figsize=figsize)
+
+        if self.axes is not None:
+            ax.set_xlim(self.axes[0][0],self.axes[0][1])
+            ax.set_ylim(self.axes[1][0],self.axes[1][1])  
+
+        # For coloring by category
+        if self.colorBy != 'Default':
+            values = list(set(self.df.loc[self.sampleList][self.colorBy]))
+            dicts = {}
+            c = 0
+            for value in values:
+                dicts[value] = colorMe(c)
+                c += 1
+
+        for i in range(len(self.mArray[self.dim-self.min_dim])):
+            if self.plotPie:
+                if self.pieType == 'Age':
+                    if len(np.shape(self.agebins)) == 1:
+                        hist = np.histogram(self.ages[i],self.agebins)[0]
+                        histP = np.cumsum([0]+list(hist/np.sum(hist)))
+                        for j in range(len(hist)): # One loop for each bin
+                            x = [0] + np.cos(np.linspace(2*math.pi*histP[j], 2*math.pi*histP[j+1], 100)).tolist()
+                            y = [0] + np.sin(np.linspace(2*math.pi*histP[j], 2*math.pi*histP[j+1], 100)).tolist()
+                            ax.fill(np.array(x)*self.pieSize+self.mArray[self.dim-self.min_dim][i][0],np.array(y)*self.pieSize+self.mArray[self.dim-self.min_dim][i][1],facecolor=self.agebinsc[j])
+                    if len(np.shape(self.agebins)) == 2:
+                        hist = [0]
+                        for j in range(len(self.agebins)):
+                            hist.append(np.histogram(self.ages[i],self.agebins[j])[0][0])
+                        histP = np.cumsum(list(hist/np.sum(hist)))
+                        for j in range(len(hist)-1): # One loop for each bin
+                                x = [0] + np.cos(np.linspace(2*math.pi*histP[j], 2*math.pi*histP[j+1], 100)).tolist()
+                                y = [0] + np.sin(np.linspace(2*math.pi*histP[j], 2*math.pi*histP[j+1], 100)).tolist()
+                                ax.fill(np.array(x)*self.pieSize+self.mArray[self.dim-self.min-dim][i][0],np.array(y)*self.pieSize+self.mArray[self.dim-self.min-dim][i][1],facecolor=self.agebinsc[j])
+                    if plotLabels:
+                        ax.text(self.mArray[self.dim-self.min_dim][i][0]+self.pieSize/1.5,self.mArray[self.dim-self.min_dim][i][1]+self.pieSize/1.5,self.labels[i])
+                if self.pieType == 'Category':
+                    hist = list(self.df.loc[self.sampleList[i]][self.pieCategories])
+                    histP = np.insert(np.cumsum(hist), 0, 0)
+                    for j in range(len(hist)): # One loop for each bin
+                        x = [0] + np.cos(np.linspace(2*math.pi*histP[j], 2*math.pi*histP[j+1], 100)).tolist()
+                        y = [0] + np.sin(np.linspace(2*math.pi*histP[j], 2*math.pi*histP[j+1], 100)).tolist()
+                        ax.fill(np.array(x)*self.pieSize+self.mArray[self.dim-self.min_dim][i][0],np.array(y)*self.pieSize+self.mArray[self.dim-self.min_dim][i][1],facecolor=self.agebinsc[j])
+                    if plotLabels:
+                        ax.text(self.mArray[self.dim-self.min_dim][i][0]+self.pieSize/1.5,self.mArray[self.dim-self.min_dim][i][1]+self.pieSize/1.5,self.labels[i])
+                ax.set_aspect('equal')
+            else:
+                if self.colorBy == 'Default':
+                    ax.plot(self.mArray[self.dim-self.min_dim][i][0],self.mArray[self.dim-self.min_dim][i][1],'o',label=self.sampleList[i],color=colorMe(i))
+                    if plotLabels:
+                        ax.text(self.mArray[self.dim-self.min_dim][i][0]+0.01,self.mArray[self.dim-self.min_dim][i][1]+0.01,self.labels[i])
+                else:
+                    ax.plot(self.mArray[self.dim-self.min_dim][i][0],self.mArray[self.dim-self.min_dim][i][1],'o',label=self.sampleList[i],color=dicts[self.df.loc[self.sampleList[i],self.colorBy]])
+                    if plotLabels:
+                        ax.text(self.mArray[self.dim-self.min_dim][i][0]+0.01,self.mArray[self.dim-self.min_dim][i][1]+0.01,self.labels[i])
+
+            if savePlot:
+                pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
+                figMDS.savefig('Output/'+fileName)
+        if equalAspect:
+            ax.set_aspect('equal')
+        print('Final stress: ',self.stress1Array[self.dim-self.min_dim])
     
 def MDS(ages, errors, labels, sampleList, metric=False, plotWidth='10', plotHeight='8', plotPie=False, pieSize=0.05, agebins=None, agebinsc=None, criteria='Dmax', bw='optimizedFixed', color='Default', main_byid_df=None, plotLabels=True):
     """
@@ -1958,6 +2353,7 @@ def MDS(ages, errors, labels, sampleList, metric=False, plotWidth='10', plotHeig
     
     Notes
     -----
+    The MDS() function has been deprecated. We recommend using functions within the MDS_class().
     """     
     from scipy import stats
     from sklearn import manifold
@@ -2561,7 +2957,7 @@ def weightedMeanCSV(ages, errors, numGrains, labels, fileName='weightedMean.csv'
             dataRow = np.append(dataRow, weightedMean(ages[i], errors[i])[1])
             dataRow = np.append(dataRow, weightedMean(ages[i], errors[i])[2])
             writer.writerow(dataRow)
-                
+
 ###############################################################
 # Helper functions 
 ###############################################################            
@@ -2720,12 +3116,13 @@ def KDEcalcAgesLocalAdapt(ages, x1=0, x2=4500, xdif=1, cumulative=False):
     Notes
     -----
     """
-    import adaptiveKDE as akde
+    import detritalpy.adaptiveKDE as akde
+    #import adaptiveKDE as akde
 
     KDE_age = np.arange(0, 4500+xdif, xdif) # Ensures that the KDE is calculated over all of geologic time
     KDE = np.zeros(shape=(len(ages),len(KDE_age)))
     for i in range(len(ages)):
-        kde = akde.sskernel(np.asarray(ages[i]), tin=KDE_age)[0]
+        kde = akde.sskernel(np.asarray(ages[i]), tin=KDE_age, nbs=1000)[0]
         if cumulative:
             kde = np.cumsum(kde)*xdif # Seems like this must be multiplied by xdif for it to work
         KDE[i,:] = kde
@@ -2757,14 +3154,14 @@ def KDEcalcAgesGlobalAdapt(ages, x1=0, x2=4500, xdif=1, cumulative=False):
     
     Notes
     -----
-    Requires installation of the adaptivekde library.
     """
     import detritalpy.adaptiveKDE as akde
+    #import adaptiveKDE as akde
 
     KDE_age = np.arange(x1, x2+xdif, xdif)
     KDE = np.zeros(shape=(len(ages),len(KDE_age)))
     for i in range(len(ages)):
-        kde = akde.ssvkernel(np.asarray(ages[i]), tin=KDE_age, nbs=int(1e2))[0]
+        kde = akde.ssvkernel(np.asarray(ages[i]), tin=KDE_age, nbs=100)[0]
         if cumulative:
             kde = np.cumsum(kde)*xdif # Seems like this must be multiplied by xdif for it to work
         KDE[i,:] = kde
@@ -2772,7 +3169,7 @@ def KDEcalcAgesGlobalAdapt(ages, x1=0, x2=4500, xdif=1, cumulative=False):
     
 def colorMe(i, palette='Default'):
     """
-    Returns a color for a given integer input
+    Returns a color for a given integer input. 
     
     Parameters
     ----------

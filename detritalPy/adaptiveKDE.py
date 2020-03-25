@@ -129,7 +129,7 @@ def sshist(x, N=range(2, 501), SN=30):
 
     return optN, optD, edges, C, N
 
-def sskernel(x, tin=None, W=None, nbs=1e3):
+def sskernel(x, tin=None, W=None, nbs=1000):
     """
     Generates a kernel density estimate with globally-optimized bandwidth.
 
@@ -265,7 +265,7 @@ def sskernel(x, tin=None, W=None, nbs=1e3):
 
     # estimate confidence intervals by bootstrapping
     nbs = np.asarray(nbs)
-    yb = np.zeros((nbs, len(tin)))
+    yb = np.zeros((int(nbs),len(tin)))
     for i in range(nbs):
         idx = np.random.randint(0, len(x_ab)-1, len(x_ab))
         xb = x_ab[idx]
@@ -313,7 +313,7 @@ def ilogexpSS(x):
         y = x
     return y
 
-def ssvkernel(x, tin=None, M=80, nbs=1e2, WinFunc='Boxcar'):
+def ssvkernel(x, tin=None, M=80, nbs=100, WinFunc='Boxcar'):
     """
     Generates a locally adaptive kernel-density estimate for one-dimensional
     data.
