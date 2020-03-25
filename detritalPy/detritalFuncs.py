@@ -21,17 +21,17 @@ import pandas as pd
 
 def loadData(samples, analyses, ID_col = 'Sample_ID'):
     """
-    Creates a database from a table of samples and analyses
+    Creates a Pandas DataFrame from DataFrames of samples and analyses
     
     Parameters
     ----------
-    samples : A table that contains sample information.
-    analyses : A table that contains analysis information
+    samples : A Pandas DataFrame that contains sample information. Must be indexed by the Sample_ID
+    analyses : A Pandas DataFrame that contains analysis information. Must be indexed by the Sample_ID
     ID_col : (optional) The name of the column that contains unique sample identifiers. Default is 'Sample_ID'
     
     Returns
     -------
-    main_byid_df : the database indexed by sample name
+    main_byid_df : A Pandas DataFrame indexed by Sample_ID
     
     Notes
     -----
@@ -41,9 +41,11 @@ def loadData(samples, analyses, ID_col = 'Sample_ID'):
     main_byid_df = None
     main_byid_df = samples.copy()
     for sample_ind in range(main_byid_df.shape[0]):
-        active_sample_id = main_byid_df.loc[sample_ind][ID_col]
+        active_sample_id = main_byid_df.iloc[sample_ind][ID_col]
         if active_sample_id in analyses.index: # Allows samples to exist without analyses data
             active_UPb_data = analyses.loc[active_sample_id]
+            if len(active_UPb_data.shape) == 1: # Eliminates an error that occurs when a sample only has 1 analysis
+                active_UPb_data = pd.DataFrame(active_UPb_data).T            
             for colname in active_UPb_data:
                 if colname not in [ID_col]:
                 # Make colname if not already in dataframe
@@ -1775,7 +1777,6 @@ def MDAtoCSV(sampleList, ages, errors, numGrains, labels, fileName, sortBy, barW
     -----
     """ 
     import csv
-    import matplotlib.pyplot as plt
     
     pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
     #####
@@ -1926,7 +1927,7 @@ def MDAtoCSV(sampleList, ages, errors, numGrains, labels, fileName, sortBy, barW
 
         if makePlot:
             return figMDA
-                
+    
 def MDS(ages, errors, labels, sampleList, metric=False, plotWidth='10', plotHeight='8', plotPie=False, pieSize=0.05, agebins=None, agebinsc=None, criteria='Dmax', bw='optimizedFixed', color='Default', main_byid_df=None, plotLabels=True):
     """
     Create a multi-dimensional scaling (MDS) plot for individual samples or groups of samples.
@@ -1966,26 +1967,26 @@ def MDS(ages, errors, labels, sampleList, metric=False, plotWidth='10', plotHeig
 
     figMDS, ax = plt.subplots(1, figsize=(plotWidth,plotHeight))
 
-    # Calculate the CDF matrix
+    # Calculate the distribution matrix
     if criteria == 'Dmax' or criteria == 'Vmax':
-        CDF = CDFcalcAges(ages)[1]
+        dist = CDFcalcAges(ages)[1]
     if criteria == 'R2-PDP':
-        CDF = PDPcalcAges(ages=ages, errors=errors, x1=0, x2=4500, xdif=1, cumulative=True)[1]
+        dist = PDPcalcAges(ages=ages, errors=errors, x1=0, x2=4500, xdif=1, cumulative=False)[1]
     if criteria == 'R2-KDE':
         if bw == 'optimizedFixed':
-            CDF = KDEcalcAgesLocalAdapt(ages=ages, x1=0, x2=4500, xdif=1, cumulative=True)[1]
+            dist = KDEcalcAgesLocalAdapt(ages=ages, x1=0, x2=4500, xdif=1, cumulative=False)[1]
         if bw == 'optimizedVariable':
-            CDF = KDEcalcAgesGlobalAdapt(ages=ages, x1=0, x2=4500, xdif=1, cumulative=True)[1]
+            dist = KDEcalcAgesGlobalAdapt(ages=ages, x1=0, x2=4500, xdif=1, cumulative=False)[1]
         if type(bw) != str:
-            CDF = KDEcalcAges_2(ages=ages, x1=0, x2=4500, xdif=1, bw=bw, cumulative=True)[1]
+            dist = KDEcalcAges_2(ages=ages, x1=0, x2=4500, xdif=1, bw=bw, cumulative=False)[1]
     for i in range(len(ages)):
         for j in range(len(ages)):
             if criteria == 'Dmax':
                 matrix[i,j] = stats.ks_2samp(ages[i],ages[j])[0]
             if criteria == 'Vmax':
-                matrix[i,j] = calcVmax(CDF[i], CDF[j])
+                matrix[i,j] = calcVmax(dist[i], dist[j])
             if criteria == 'R2-PDP' or criteria == 'R2-KDE':
-                matrix[i,j] = calcComplR2(CDF[i], CDF[j])     
+                matrix[i,j] = calcComplR2(dist[i], dist[j])     
     mds = manifold.MDS(random_state=1, dissimilarity='precomputed', n_init=1)
     pos = mds.fit(matrix).embedding_
     posStress = mds.fit(matrix).stress_     
@@ -2769,7 +2770,7 @@ def KDEcalcAgesGlobalAdapt(ages, x1=0, x2=4500, xdif=1, cumulative=False):
         KDE[i,:] = kde
     return KDE_age, KDE
     
-def colorMe(i):
+def colorMe(i, palette='Default'):
     """
     Returns a color for a given integer input
     
@@ -2783,8 +2784,9 @@ def colorMe(i):
     
     Notes
     -----
-    """    
-    colors = ['darkgreen', 'firebrick', 'darkblue', 'goldenrod', 'darkviolet', 'olive', 'lightcoral', 'gray', 'saddlebrown', 'dodgerblue', 'darkkhaki', 'mediumpurple', 'black', 'darkred', 'darkolivegreen']
+    """  
+    if palette == 'Default':  
+        colors = ['darkgreen', 'firebrick', 'darkblue', 'goldenrod', 'darkviolet', 'olive', 'lightcoral', 'gray', 'saddlebrown', 'dodgerblue', 'darkkhaki', 'mediumpurple', 'black', 'darkred', 'darkolivegreen']
     return colors[i%len(colors)]
 
 def weightedMean(ages,error1s,conf=0.95):
