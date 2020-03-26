@@ -1479,7 +1479,7 @@ def ageProportionsCSV(ages, errors, numGrains, labels, agebins, fileName):
     rowLabels = ['Sample','numGrains']
 
     pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
-    with open(pathlib.Path('Output/') / fileName, 'w', newline='') as f: #Select the CSV file to save data to , 'wb'
+    with open(str('Output/' + fileName), 'w', newline='') as f: #Select the CSV file to save data to , 'wb'
         writer = csv.writer(f)
 
         # Create category names (age ranges)
@@ -1926,7 +1926,7 @@ def MDAtoCSV(sampleList, ages, errors, numGrains, labels, fileName, sortBy, barW
     
     pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
     #####
-    with open(str(pathlib.Path('Output/')) + fileName, 'w', newline='') as f: #Select the CSV file to save data to
+    with open(str('Output/' + fileName), 'w', newline='') as f: #Select the CSV file to save data to
         writer = csv.writer(f)
         writer.writerow(('Sample','N', 'YSG', 'YSG_err1s', 'YC1S WM', 'YC1S WM 1serr', 'YC1S WM MSWD', 'YC1S cluster size', 'YC2S WM', 'YC2S WM 1serr', 'YC2S WM MSWD', 'YC2S cluster size'))
         N = len(sampleList) # Number of samples or groups of samples
@@ -2177,7 +2177,7 @@ class MDS_class:
             self.distances = np.empty(shape=(len(self.ages),len(self.ages)))
             for i in range(len(self.ages)):
                 for j in range(len(self.ages)):
-                    self.distances[i,j] = np.linalg.norm(self.mArray[h][i]-self.mArray[h][j])
+                    self.distances[i,j] = np.linalg.norm(self.mArray[h][i]-self.mArray[h][j]) # calculates the distance between MDS x- and y-coordinates for each sample
             self.distancesArray.append(self.distances)
             self.y_distances = []
             self.x_dissimilarity = []
@@ -2191,13 +2191,13 @@ class MDS_class:
             self.y_distancesArray.append(self.y_distances)
             self.x_dissimilarityArray.append(self.x_dissimilarity)
 
-            # Calculate the Stres-1 of Kruskal (1964)
+            # Calculate the Stres-1 of Kruskal (1964) following Vermeesch (2013): Chemical Geology
             for i in range(len(self.x_dissimilarity)):
                 S1_numerator = []
                 S1_denominator = []
-                for i in range(len(self.x_dissimilarity)):
-                    S1_numerator.append(((self.x_dissimilarity[i]-self.y_distances[i])**2))
-                    S1_denominator.append(self.y_distances[i]**2)
+                for j in range(len(self.x_dissimilarity)):
+                    S1_numerator.append(((self.x_dissimilarity[j]-self.y_distances[j])**2))
+                    S1_denominator.append(self.y_distances[j]**2)
             self.stress1Array.append(np.sqrt(np.sum(S1_numerator)/np.sum(S1_denominator)))
 
     def QQplot(self, figsize=(10,10), savePlot=True, fileName='QQplot.pdf', halfMatrix=True):
@@ -2250,7 +2250,7 @@ class MDS_class:
         figQQ.subplots_adjust(wspace=0)
         figQQ.subplots_adjust(hspace=0)
 
-    def heatMap(self, figsize=(10,10), savePlot=True, fileName='HeatMapPlot.pdf', plotValues=True):
+    def heatMap(self, figsize=(10,10), savePlot=True, fileName='HeatMapPlot.pdf', plotValues=True, plotType = 'dissimilarity', fontsize=8):
         """
         This function creates a heatmap of dissimilarity values used in the MDS calculation
 
@@ -2264,13 +2264,17 @@ class MDS_class:
         savePlot : set to True to create a PDF of the plot in the Output folder (default = True)
         fileName : name of the file being saved, if savePlot == True (default = 'HeatMapPlot.pdf')
         plotValues : set to True to plot dissimilarity values on the heatmap
+        plotType : selects whether to plot dissimilarity metric values or MDS distance values. options: 'dissimilarity' or 'distance' (default = 'dissimilarity')
 
         Notes
         -----
         """
 
-        figHeatMap, ax = plt.subplots(figsize=(10,10))
-        im = ax.imshow(self.matrix, cmap='Reds', vmin=0, vmax=1)
+        figHeatMap, ax = plt.subplots(figsize=figsize)
+        if plotType == 'dissimilarity':
+            im = ax.imshow(self.matrix, cmap='Reds', vmin=0, vmax=1)
+        if plotType == 'distance':
+            im = ax.imshow(self.distancesArray[self.dim-self.min_dim], cmap='Reds')
         ax.set_xticks(np.arange(len(self.sampleList)))
         ax.set_yticks(np.arange(len(self.sampleList)))
         ax.set_xticklabels(self.sampleList)
@@ -2280,7 +2284,10 @@ class MDS_class:
         if plotValues:
             for i in range(len(self.ages)):
                 for j in range(len(self.ages)):
-                    text = ax.text(j, i, np.round(self.matrix[i,j], decimals=2), ha='center', va='center')
+                    if plotType == 'dissimilarity':
+                        text = ax.text(j, i, np.round(self.matrix[i,j], decimals=2), ha='center', va='center', fontsize=fontsize)
+                    if plotType == 'distance':
+                        text = ax.text(j, i, np.round(self.distancesArray[self.dim-self.min_dim][i,j], decimals=2), ha='center', va='center', fontsize=fontsize)
         # Rotate the tick labels and set their alignment.
         plt.setp(ax.get_xticklabels(), rotation=90, ha="right",
                  rotation_mode="anchor")
@@ -2312,7 +2319,7 @@ class MDS_class:
         if len(self.stressArray) == 1:
             print('Only one dimension modeled! Cannot plot stress vs number of dimensions')
         else:
-            figStress, ax = plt.subplots()
+            figStress, ax = plt.subplots(figsize=figsize)
             if stressType == 'sklearn':
                 ax.plot(np.arange(self.max_dim)+1, self.stressArray,'o', markerfacecolor='white', markeredgecolor='black')
                 ax.plot(np.arange(self.max_dim)+1, self.stressArray, '-', color='black')
@@ -2349,11 +2356,11 @@ class MDS_class:
         -----
         """
 
-        figShepard, ax = plt.subplots()
+        figShepard, ax = plt.subplots(figsize=figsize)
 
         if plotOneToOneLine:
             ax.plot([0,1],[0,1],'--', color='black')
-        ax.plot(self.x_dissimilarity, self.y_distances, 'o', markerfacecolor='white', markeredgecolor='black')
+        ax.plot(self.x_dissimilarityArray[self.dim-self.min_dim], self.y_distancesArray[self.dim-self.min_dim], 'o', markerfacecolor='white', markeredgecolor='black')
         ax.set_xlim(0,)
         ax.set_ylim(0,)
         ax.set_ylabel('Distance')
@@ -2365,7 +2372,7 @@ class MDS_class:
             figShepard.savefig('Output/'+fileName)
 
     def MDSplot(self, figsize=(10,10), savePlot=True, fileName='MDSplot.pdf', plotPie=False, pieSize=0.05, agebins=None, agebinsc=None, pieType='Age', 
-        pieCategories=None, df=None, axes=None, colorBy='Default', plotLabels=True, equalAspect=True):
+        pieCategories=None, df=None, axes=None, colorBy='Default', plotLabels=True, equalAspect=True, stressType='Stress-1'):
         """
         Plot the results of the MDS analysis
 
@@ -2407,10 +2414,29 @@ class MDS_class:
         self.colorBy = colorBy
 
         figMDS, ax = plt.subplots(1, figsize=figsize)
+        
+        if equalAspect:
+            ax.set_aspect('equal')
 
         if self.axes is not None:
             ax.set_xlim(self.axes[0][0],self.axes[0][1])
-            ax.set_ylim(self.axes[1][0],self.axes[1][1])  
+            ax.set_ylim(self.axes[1][0],self.axes[1][1])
+        else:
+            x_min = np.min(self.mArray[self.dim-self.min_dim][:,0])
+            x_max = np.max(self.mArray[self.dim-self.min_dim][:,0])
+            y_min = np.min(self.mArray[self.dim-self.min_dim][:,1])
+            y_max = np.max(self.mArray[self.dim-self.min_dim][:,1])
+            x_buffer = np.abs(x_max-x_min)*0.10 # 10% buffer around figure
+            y_buffer = np.abs(y_max-y_min)*0.10 # 10% buffer around figure
+            ax.set_xlim(x_min-x_buffer, x_max+x_buffer)
+            ax.set_ylim(y_min-y_buffer, y_max+y_buffer)
+
+        # Determine the vertical scale adjustment needed for pie diagrams
+        x1, x2 = ax.get_xlim()
+        y1, y2 = ax.get_ylim()
+        bbox = ax.get_window_extent().transformed(figMDS.dpi_scale_trans.inverted())
+        width, height = bbox.width, bbox.height
+        vertScaleAdjust = (height/width)/((y2-y1)/(x2-x1))
 
         # For coloring by category
         if self.colorBy != 'Default':
@@ -2430,6 +2456,8 @@ class MDS_class:
                         for j in range(len(hist)): # One loop for each bin
                             x = [0] + np.cos(np.linspace(2*math.pi*histP[j], 2*math.pi*histP[j+1], 100)).tolist()
                             y = [0] + np.sin(np.linspace(2*math.pi*histP[j], 2*math.pi*histP[j+1], 100)).tolist()
+                            if not equalAspect:
+                                y = [i/vertScaleAdjust for i in y]
                             ax.fill(np.array(x)*self.pieSize+self.mArray[self.dim-self.min_dim][i][0],np.array(y)*self.pieSize+self.mArray[self.dim-self.min_dim][i][1],facecolor=self.agebinsc[j])
                     if len(np.shape(self.agebins)) == 2:
                         hist = [0]
@@ -2439,6 +2467,8 @@ class MDS_class:
                         for j in range(len(hist)-1): # One loop for each bin
                                 x = [0] + np.cos(np.linspace(2*math.pi*histP[j], 2*math.pi*histP[j+1], 100)).tolist()
                                 y = [0] + np.sin(np.linspace(2*math.pi*histP[j], 2*math.pi*histP[j+1], 100)).tolist()
+                                if not equalAspect:
+                                    y = [i/vertScaleAdjust for i in y]
                                 ax.fill(np.array(x)*self.pieSize+self.mArray[self.dim-self.min-dim][i][0],np.array(y)*self.pieSize+self.mArray[self.dim-self.min-dim][i][1],facecolor=self.agebinsc[j])
                     if plotLabels:
                         ax.text(self.mArray[self.dim-self.min_dim][i][0]+self.pieSize/1.5,self.mArray[self.dim-self.min_dim][i][1]+self.pieSize/1.5,self.labels[i])
@@ -2448,10 +2478,13 @@ class MDS_class:
                     for j in range(len(hist)): # One loop for each bin
                         x = [0] + np.cos(np.linspace(2*math.pi*histP[j], 2*math.pi*histP[j+1], 100)).tolist()
                         y = [0] + np.sin(np.linspace(2*math.pi*histP[j], 2*math.pi*histP[j+1], 100)).tolist()
+                        if not equalAspect:
+                            y = [i/vertScaleAdjust for i in y]                        
                         ax.fill(np.array(x)*self.pieSize+self.mArray[self.dim-self.min_dim][i][0],np.array(y)*self.pieSize+self.mArray[self.dim-self.min_dim][i][1],facecolor=self.agebinsc[j])
                     if plotLabels:
                         ax.text(self.mArray[self.dim-self.min_dim][i][0]+self.pieSize/1.5,self.mArray[self.dim-self.min_dim][i][1]+self.pieSize/1.5,self.labels[i])
-                ax.set_aspect('equal')
+                #if equalAspect:
+                #    ax.set_aspect('equal')
             else:
                 if self.colorBy == 'Default':
                     ax.plot(self.mArray[self.dim-self.min_dim][i][0],self.mArray[self.dim-self.min_dim][i][1],'o',label=self.sampleList[i],color=colorMe(i))
@@ -2465,9 +2498,11 @@ class MDS_class:
             if savePlot:
                 pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
                 figMDS.savefig('Output/'+fileName)
-        if equalAspect:
-            ax.set_aspect('equal')
-        print('Final stress: ',self.stress1Array[self.dim-self.min_dim])
+
+        if stressType == 'Stress-1':
+            print('Final stress: ',self.stress1Array[self.dim-self.min_dim])
+        if stressType == 'sklearn':
+            print('Final stress: ',self.stressArray[self.dim-self.min_dim])
     
 def MDS(ages, errors, labels, sampleList, metric=False, plotWidth='10', plotHeight='8', plotPie=False, pieSize=0.05, agebins=None, agebinsc=None, criteria='Dmax', bw='optimizedFixed', color='Default', main_byid_df=None, plotLabels=True):
     """
@@ -2882,7 +2917,7 @@ def exportDist(ages, errors, labels, exportType, cumulative, x1, x2, xdif, bw, f
             dist[i] = dist[i]/sum(dist[i])      
     
     pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
-    with open(str(pathlib.Path('Output/')) + fileName, 'w', newline='') as f: #Select the CSV file to save data to
+    with open(str('Output/' + fileName), 'w', newline='') as f: #Select the CSV file to save data to
         writer = csv.writer(f)
 
         dataRow = ['Age'] # create an empty array    
@@ -2920,7 +2955,7 @@ def agesErrorsCSV(ages, errors, sampleList, fileName):
     maxNumGrains = max([len(l) for l in agesErrors])
 
     pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
-    with open(str(pathlib.Path('Output/')) + fileName, 'w', newline='') as f: #Select the CSV file to save data to
+    with open(str('Output/' + fileName), 'w', newline='') as f: #Select the CSV file to save data to
         writer = csv.writer(f)
 
         # Write sample name column headings. The extra blank is to take up two columns per sample heading.
@@ -2987,7 +3022,7 @@ def calcComparisonCSV(ages, errors, numGrains, labels, sampleList, calculateSimi
                 dist = KDEcalcAges_2(ages, bw=bw)[1]
     
     pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
-    with open(str(pathlib.Path('Output/')) + fileName, 'w', newline='') as f: #Select the CSV file to save data to , 'wb'
+    with open(str('Output/' + fileName), 'w', newline='') as f: #Select the CSV file to save data to , 'wb'
         writer = csv.writer(f)
         labelRow = ['Label','n']
         for i in range(len(sampleList)):
@@ -3091,7 +3126,7 @@ def weightedMeanCSV(ages, errors, numGrains, labels, fileName='weightedMean.csv'
     import csv
     
     pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
-    with open(str(pathlib.Path('Output/')) + fileName, 'w', newline='') as f: #Select the CSV file to save data to
+    with open(str('Output/' + fileName), 'w', newline='') as f: #Select the CSV file to save data to
         writer = csv.writer(f)
         labelRow = ['Sample','Ngrains','Mean','2s internal error','MSWD']
         writer.writerow(labelRow)
