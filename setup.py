@@ -6,7 +6,7 @@ with open('/Users/gsharman/Box/detritalPy/pip_installation/README.md', "r") as f
 setuptools.setup(
     name="detritalpy",
     packages=['detritalpy'],    
-    version="1.3.8",
+    version="1.3.9",
     author="Glenn Sharman",
     author_email="gsharman@uark.edu",
     description="A Python-based toolset for visualizing and analyzing detrital geo-thermochronologic data",
