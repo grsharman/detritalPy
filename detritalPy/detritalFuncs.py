@@ -179,9 +179,16 @@ def sampleToData(sampleList, main_byid_df, sampleLabel='Sample_ID', bestAge='Bes
     errors = []
     numGrains = []
     labels = []
+
     if type(sampleList[0])==tuple:
         for i in range(N):
             samples = sampleList[i][0]
+            # Verify that all samples are in the database
+            if not all(sample in list(main_byid_df.Sample_ID) for sample in sampleList[i][0]):
+                print('These samples are not in the database - check for typos!')
+                print(list(np.setdiff1d(sampleList[i][0],list(main_byid_df.Sample_ID))))
+                print('Function stopped')
+                break
             sampleAges = []
             sampleErrors = []
             for sample in samples:                             
@@ -196,6 +203,12 @@ def sampleToData(sampleList, main_byid_df, sampleLabel='Sample_ID', bestAge='Bes
             labels.append(sampleList[i][1])
     else:
         for sample in sampleList:
+            # Verify that all samples are in the database
+            if not all(sample in list(main_byid_df.Sample_ID) for sample in sampleList):
+                print('These samples are not in the database - check for typos!')
+                print(list(np.setdiff1d(sampleList,list(main_byid_df.Sample_ID))))
+                print('Function stopped')
+                break            
             ages.append(main_byid_df.loc[sample, bestAge])
             if sigma == '2sigma':
                 errors.append(main_byid_df.loc[sample, bestAgeErr]/2.)
