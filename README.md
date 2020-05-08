@@ -32,11 +32,11 @@ Installation of the open data science platform Anaconda by Continuum Analytics w
 
 ## Data Formatting
 
-detritalPy requires that input data be organized using a specific format. Example datasets can be found in the [example-data folder](https://github.com/grsharman/detritalPy/blob/master/example-data.zip), and additional information is provided in the [detritalPy manual](https://github.com/grsharman/detritalPy/blob/master/detritalPy_manual_0.0.1.zip).
+detritalPy requires that input data be organized using a specific format. Example datasets can be found in the [example-data folder](https://github.com/grsharman/detritalPy/blob/master/example-data.zip), and additional information is provided in the [detritalPy manual](https://github.com/grsharman/detritalPy/blob/master/detritalPy_manual_0.0.1.zip). Dr. Jeff Amato (New Mexico State University) has put together a beginner's guide to detritalPy (geared towards MacOS) that can be found [here](https://geology.nmsu.edu/files/2020/04/DetritalPyForMacManual.pdf).
 
 ## Data Import and Selection
 
-One or more spreadsheets can be simultaneously imported using a number of different ways of specifying the file path.
+One or more spreadsheets can be simultaneously imported using a number of different ways of specifying the file path. Additional examples are provided in tutorial_dataLoading.ipynb.
 
 ```python
 # Import relative file pathway(s)
@@ -59,7 +59,7 @@ dataToLoad = [r'C:\Users\gsharman\Documents\GitHub\detritalPy\example-data\Examp
 main_df, main_byid_df, samples_df, analyses_df = dFunc.loadDataExcel(dataToLoad)
 ```
 
-Or this way if using a Mac:
+Or this way if using a Mac or PC:
 
 ```python
 # Specify file paths to data input file(s)
@@ -106,10 +106,14 @@ figDouble = dFunc.plotDouble(sampleList, main_byid_df, ages, errors, numGrains, 
 <img src="https://github.com/grsharman/detritalPy/blob/master/doublePlot.svg" width="900">
 
 ### Multi-dimensional scaling
+<b><i>Revised and updated in detritalPy version 1.3</i></b>
 ```python
-figMDS, stress = dFunc.MDS(ages, errors, labels, sampleList, metric=False, plotWidth=10, plotHeight=8, plotPie=True, pieSize=0.05, agebins=[0, 23, 65, 85, 100, 135, 200, 300, 500, 4500], agebinsc=['slategray','royalblue','gold','red','darkred','purple','navy','gray','saddlebrown'], criteria='Dmax')
+model = dFunc.MDS_class(ages, errors, labels, sampleList, criteria='Vmax')
+model.MDSplot(figsize=(6,6), savePlot=True, fileName='MDSplot.pdf', plotLabels=True, 
+              plotPie=True, pieType='Age', pieSize=0.02, agebins=[0, 23, 65, 85, 100, 135, 200, 300, 500, 4500],
+              agebinsc=['slategray','royalblue','gold','red','darkred','purple','navy','gray','saddlebrown'], equalAspect=False)
 ```
-<img src="https://github.com/grsharman/detritalPy/blob/master/MDSplot.svg" width="600">
+<img src="https://github.com/grsharman/detritalPy/blob/master/MDSplot_v1.3.svg" width="600">
 
 ### (U-Th)/He vs U-Pb age "double dating" plot
 ```python
