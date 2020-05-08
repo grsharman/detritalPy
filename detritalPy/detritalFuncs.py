@@ -250,7 +250,8 @@ def sampleToVariable(sampleList, main_byid_df, variableName):
 def plotAll(sampleList, ages, errors, numGrains, labels, whatToPlot='both', separateSubplots=True, plotCDF=True, plotCPDP=False, plotCKDE=False, plotDKW=False,
     normPlots=False, plotKDE=False, colorKDE=False, colorKDEbyAge=False, plotPDP=True, colorPDP=True, colorPDPbyAge=False, plotColorBar=False, plotHist=False,
     plotLog=False, plotPIE=False, x1=0, x2=4000, b=25, bw=10, xdif=1, agebins=None, agebinsc=None, w=10, c=4, h=5, plotAgePeaks=False, agePeakOptions=None,
-    CDFlw=3, KDElw=1, PDPlw=1, plotDepoAge = False, depoAge = [0], plotAgesOnCDF = False, plotHeatMap = False, heatMapType = None, heatMap = 'inferno_r'):
+    CDFlw=3, KDElw=1, PDPlw=1, plotDepoAge = False, depoAge = [0], plotAgesOnCDF = False, plotHeatMap = False, heatMapType = None, heatMap = 'inferno_r',
+    PDP_ymax = 'Default', KDE_ymax = 'Default'):
     """
     Creates a plot of detrital age distributions using a variety of the most common data visualization approaches. The plotting function is divided into a cumulative distribution plot and a relative distribution plot. When both are plotted together, the cumulative distribution is shown on top and the relative distribution for each sample or group of samples is shown below.
 
@@ -297,6 +298,8 @@ def plotAll(sampleList, ages, errors, numGrains, labels, whatToPlot='both', sepa
     plotDepoAge: (optional) set to True to plot the depositional age of samples (only available if separateSubplots == True)
     depoAge: (optional) List of depositional age (Ma) of samples. If len(depoAge) == 1, then the one single age will be used throughout.
     plotAgesOnCDF: (optional) set to True to plot individual analyses with error on the CDF plot
+    PDP_ymax : (optional) set to a numeric value (float or integer) to manually specify the y-axis maximum scale on PDPs (currently only implemented if separateSubplots=True)
+    KDE_ymax : (optional) set to a numeric value (float or integer) to manually specify the y-axis maximum scale on KDEs (currently only implemented if separateSubplots=True)
 
     Returns
     -------
@@ -313,7 +316,8 @@ def plotAll(sampleList, ages, errors, numGrains, labels, whatToPlot='both', sepa
     if separateSubplots:
         fig = plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, plotCPDP, plotCKDE, plotDKW, normPlots, plotKDE, 
             colorKDE, colorKDEbyAge, plotPDP, colorPDP, colorPDPbyAge, plotColorBar, plotHist, plotLog, plotPIE, x1, x2, b, bw, xdif, agebins, 
-            agebinsc, w, c, plotAgePeaks, agePeakOptions, CDFlw, KDElw, PDPlw, plotDepoAge, depoAge, plotAgesOnCDF, plotHeatMap, heatMapType, heatMap)
+            agebinsc, w, c, plotAgePeaks, agePeakOptions, CDFlw, KDElw, PDPlw, plotDepoAge, depoAge, plotAgesOnCDF, plotHeatMap, heatMapType, heatMap,
+            PDP_ymax, KDE_ymax)
     else:
         fig = plotAll_2(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, plotCPDP, plotCKDE, plotDKW, normPlots, plotKDE, 
             colorKDE, colorKDEbyAge, plotPDP, colorPDP, colorPDPbyAge, plotColorBar, plotHist, plotLog, plotPIE, x1, x2, b, bw, xdif, agebins, 
@@ -322,7 +326,7 @@ def plotAll(sampleList, ages, errors, numGrains, labels, whatToPlot='both', sepa
 
 def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, plotCPDP, plotCKDE, plotDKW, normPlots, plotKDE, colorKDE, 
     colorKDEbyAge, plotPDP, colorPDP, colorPDPbyAge, plotColorBar, plotHist, plotLog, plotPIE, x1, x2, b, bw, xdif, agebins, agebinsc, w, c, 
-    plotAgePeaks, agePeakOptions, CDFlw, KDElw, PDPlw, plotDepoAge, depoAge, plotAgesOnCDF, plotHeatMap, heatMapType, heatMap):
+    plotAgePeaks, agePeakOptions, CDFlw, KDElw, PDPlw, plotDepoAge, depoAge, plotAgesOnCDF, plotHeatMap, heatMapType, heatMap, PDP_ymax, KDE_ymax):
 
     if type(x1) == int: # Log plot not available with split axis plot
         if (plotLog and x1 == 0):
@@ -661,8 +665,10 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                         axKDE.set_xlim(x1[h], x2[h])
                     if h == loops-1: # Only plot legend for rightmost plot
                         axKDE.legend(loc="upper right", prop={'size':8})
-                    # Adjust the y-axis scale, depending on normalization
+                    # Adjust the y-axis scale, normalize y-axes
                     if normPlots:
+                        if KDE_ymax != 'Default': # Warn users that a manual scale will not be used
+                            print('Warning: The KDE y-axis value will be normalized. Set normPlots = False if a manual y-axis scale is desired')
                         if loops == 1:
                             kdeMax = 0
                             for k in range(len(sampleList)):
@@ -672,10 +678,14 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                         else:
                             axKDE.set_ylim(0,np.max(KDEmax))
                     else:
-                        if loops >1:
-                            axKDE.set_ylim([0, KDEmax[i]+KDEmax[i]*0.05])
+                        # Adjust the y-axis scale, manually
+                        if KDE_ymax != 'Default':
+                            axKDE.set_ylim([0,KDE_ymax])
                         else:
-                            axKDE.set_ylim([0, max(KDE[i])+max(KDE[i])*0.05])                
+                            if loops >1:
+                                axKDE.set_ylim([0, KDEmax[i]+KDEmax[i]*0.05])
+                            else:
+                                axKDE.set_ylim([0, max(KDE[i])+max(KDE[i])*0.05])                
                     axKDE.get_yaxis().set_visible(False)
         
                 # PDP plot
@@ -742,6 +752,8 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                     else:
                         axPDP.set_xlim([x1[h], x2[h]])
                     if normPlots:
+                        if PDP_ymax != 'Default': # Warn users that a manual scale will not be used
+                            print('Warning: The PDP y-axis value will be normalized. Set normPlots = False if a manual y-axis scale is desired')                        
                         if loops == 1:
                             pdpMax = 0
                             for k in range(len(sampleList)):
@@ -751,10 +763,14 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                         else:
                             axPDP.set_ylim(0,np.max(PDPmax))
                     else:
-                        if type(x1) == int:
-                            axPDP.set_ylim([0, max(PDP[i])+max(PDP[i])*0.05])
+                        # Adjust the y-axis scale, manually
+                        if PDP_ymax != 'Default':
+                            axPDP.set_ylim([0,PDP_ymax])
                         else:
-                            axPDP.set_ylim([0, PDPmax[i]+PDPmax[i]*0.05])
+                            if type(x1) == int:
+                                axPDP.set_ylim([0, max(PDP[i])+max(PDP[i])*0.05])
+                            else:
+                                axPDP.set_ylim([0, PDPmax[i]+PDPmax[i]*0.05])
                     axPDP.get_yaxis().set_visible(False)
                     if plotKDE:
                         axPDP.get_xaxis().set_visible(False) # Do not plot the x-axis if it has already been plotted
