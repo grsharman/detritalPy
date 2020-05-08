@@ -287,7 +287,10 @@ def plotAll(sampleList, ages, errors, numGrains, labels, whatToPlot='both', sepa
     agebins : array of bin edges in Myr. Format option 1: [age1, age2, age3, etc.]. Format option 2: [[bin1_min, bin1_max],[bin2_min, bin2_max],etc.]
     agebinsc : array of colors that correspond to age bins
     w : width of the plot. May be an integer or an array of integers if splitting the axis
-    c : height of the plot
+    c : height of the CDF portion of the plot (if selected to be plotted)
+    h : height of the relative distribution subplot (only used if separateSubplots = False)
+    plotAgePeaks : set to True to plot peak ages
+    agePeakOptions : list with options for plotting peak ages (see notebook for explanation)
     CDFlw : (optional) weight of CDF line
     KDElw : (optional) weight of KDE line
     PDPlw : (optional) weight of PDP line
@@ -631,7 +634,8 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                                 else:
                                     if (peakAges[i][j]>x1[h] and peakAges[i][j]<x2[h]): # Only plot the peak age if within plotting range
                                         axKDE.text(x=KDE_age[indexes[i][j]],y=KDE[i][indexes[i][j]]*dx_pct[h], s=peakAges[i][j], size='x-small')                                
-                        exportPeakAge(labels, peakAges, peakAgesGrains)
+                        pathlib.Path('Output').mkdir(parents=True, exist_ok=True)
+                        exportPeakAge(labels, peakAges, peakAgesGrains, fileName = str('Output/' + 'peakAges.csv'))
                     # Fill the KDE      
                     if colorKDE:
                         axKDE.fill_between(KDE_age, 0, KDE[i]*dx_pct[h], alpha = 1, color=colorMe(i), lw=0)
@@ -699,7 +703,8 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                                 for j in range(len(peakAges[i])):
                                     if (peakAges[i][j]>x1[h] and peakAges[i][j]<x2[h]): # Only plot the peak age if within plotting range
                                         axPDP.text(x=PDP_age[indexes[i][j]],y=PDP[i][indexes[i][j]]*dx_pct[h], s=peakAges[i][j], size='x-small')                           
-                        exportPeakAge(labels, peakAges, peakAgesGrains)
+                        pathlib.Path('Output').mkdir(parents=True, exist_ok=True)
+                        exportPeakAge(labels, peakAges, peakAgesGrains, fileName = str('Output/' + 'peakAges.csv'))
                     if colorPDP:
                         axPDP.fill_between(PDP_age, PDP[i]*dx_pct[h], alpha = 1, color=colorMe(i))
                     if colorPDPbyAge:
