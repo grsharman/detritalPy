@@ -807,7 +807,10 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                         axHist.hist(ages[i], bins=bin_array, color='black', fill=None, alpha=1, histtype='bar', density=False)
                         axHist.set_xlim([x1, x2]) # Use this code to set the x-axis scale
                     else:
-                        bin_array = np.arange(x1[h], x2[h]+xdif, b)
+                        if type(b) == int:
+                            bin_array = np.arange(x1[h], x2[h]+xdif, b)
+                        else:
+                            bin_array = np.arange(x1[h], x2[h]+xdif, b[h])
                         axHist.hist(ages[i], bins=bin_array, color='black', fill=None, alpha=1, histtype='bar', density=False)
                         axHist.set_xlim([x1[h], x2[h]]) # Use this code to set the x-axis scale
                     if normPlots:
