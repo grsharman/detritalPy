@@ -2161,9 +2161,9 @@ class MDS_class:
         if self.criteria == 'Dmax' or self.criteria == 'Vmax':
             self.CDF = CDFcalcAges(self.ages)[1]
 
-        if self.criteria == 'R2-PDP':
+        if (self.criteria == 'R2-PDP' or self.criteria == 'similarity-PDP' or self.criteria == 'likeness-PDP'):
             self.PDP = PDPcalcAges(ages=self.ages, errors=self.errors, x1=x1, x2=x2, xdif=xdif, cumulative=False)[1]
-        if self.criteria == 'R2-KDE':
+        if (self.criteria == 'R2-KDE' or self.criteria == 'similarity-KDE' or self.criteria == 'likeness-KDE'):
             if bw == 'optimizedFixed':
                 self.KDE = KDEcalcAgesLocalAdapt(ages=self.ages, x1=x1, x2=x2, xdif=xdif, cumulative=False)[1]
             if bw == 'optimizedVariable':
@@ -2183,6 +2183,14 @@ class MDS_class:
                     self.matrix[i,j] = calcComplR2(self.PDP[i], self.PDP[j])
                 if self.criteria == 'R2-KDE':
                     self.matrix[i,j] = calcComplR2(self.KDE[i], self.KDE[j])
+                if self.criteria == 'similarity-PDP':
+                    self.matrix[i,j] = 1-calcSimilarity(self.PDP[i], self.PDP[j])
+                if self.criteria == 'similarity-KDE':
+                    self.matrix[i,j] = 1-calcSimilarity(self.KDE[i], self.KDE[j])
+                if self.criteria == 'likeness-PDP':
+                    self.matrix[i,j] = 1-calcLikeness(self.PDP[i], self.PDP[j])
+                if self.criteria == 'likeness-KDE':
+                    self.matrix[i,j] = 1-calcLikeness(self.KDE[i], self.KDE[j])
         self.min_dim = min_dim
         self.max_dim = max_dim
         self.dim = dim
@@ -3470,7 +3478,7 @@ def calcSimilarity(dist1, dist2):
     dist1 and dist2 must have the same length.
     Based on Saylor and Sundell, 2016: Geosphere, v. 12, doi:10.1130/GES01237.1    
     """
-    sim = np.sum((dist1*dist2)**0.5)
+    sim = np.sum((np.abs(dist1)*np.abs(dist2))**0.5) # Absolute value added to avoid numerical noise and small, negative values
     return sim
 
 def calcLikeness(dist1, dist2):
