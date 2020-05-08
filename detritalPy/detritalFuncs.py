@@ -15,6 +15,11 @@ import matplotlib.pyplot as plt
 import pathlib
 import pandas as pd
 
+# Allows font to be preserved when opening in Adobe Illustrator
+import matplotlib 
+matplotlib.rcParams['pdf.fonttype'] = 42
+matplotlib.rcParams['ps.fonttype'] = 42
+
 ###############################################################
 # Functions for loading a dataset and selecting samples 
 ###############################################################
