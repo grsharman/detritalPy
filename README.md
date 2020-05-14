@@ -36,7 +36,7 @@ Installation of the open data science platform Anaconda by Continuum Analytics w
 
 ## Data Formatting
 
-detritalPy requires that input data be organized using a specific format. Example datasets can be found in the [example-data folder](https://github.com/grsharman/detritalPy/blob/master/example-data.zip), and additional information is provided in the [detritalPy manual](https://github.com/grsharman/detritalPy/blob/master/detritalPy_Manual_v1.3.17.pdf). Dr. Jeff Amato (New Mexico State University) has put together a beginner's guide to detritalPy (geared towards MacOS) that can be found [here](https://geology.nmsu.edu/files/2020/04/DetritalPyForMacManual.pdf).
+detritalPy requires that input data be organized using a specific format. Example datasets can be found in the [example-data folder](https://github.com/grsharman/detritalPy/tree/master/detritalPy/example-data), and additional information is provided in the [detritalPy manual](https://github.com/grsharman/detritalPy/blob/master/detritalPy_Manual_v1.3.17.pdf). Dr. Jeff Amato (New Mexico State University) has put together a beginner's guide to detritalPy (geared towards MacOS) that can be found [here](https://geology.nmsu.edu/files/2020/04/DetritalPyForMacManual.pdf).
 
 ## Data Import and Selection
 
