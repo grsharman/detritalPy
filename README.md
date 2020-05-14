@@ -6,6 +6,10 @@
 
 detritalPy is a Python module for visualizing and analyzing detrital geo-thermochronologic data. Designed to be implemented via a Jupyter Notebook, detritalPy aims to provide an efficient means of processing and analyzing large detrital mineral isotopic and geochemical datasets. For more information, please refer to [Sharman et al., 2018](https://doi.org/10.1002/dep2.45).
 
+## Manual
+
+A manual for detritalPy can be found [here](https://github.com/grsharman/detritalPy/blob/master/detritalPy_Manual_v1.3.17.pdf).
+
 ## Installation
 
 <code>pip install detritalpy</code>
@@ -32,7 +36,7 @@ Installation of the open data science platform Anaconda by Continuum Analytics w
 
 ## Data Formatting
 
-detritalPy requires that input data be organized using a specific format. Example datasets can be found in the [example-data folder](https://github.com/grsharman/detritalPy/blob/master/example-data.zip), and additional information is provided in the [detritalPy manual](https://github.com/grsharman/detritalPy/blob/master/detritalPy_manual_0.0.1.zip). Dr. Jeff Amato (New Mexico State University) has put together a beginner's guide to detritalPy (geared towards MacOS) that can be found [here](https://geology.nmsu.edu/files/2020/04/DetritalPyForMacManual.pdf).
+detritalPy requires that input data be organized using a specific format. Example datasets can be found in the [example-data folder](https://github.com/grsharman/detritalPy/blob/master/example-data.zip), and additional information is provided in the [detritalPy manual](https://github.com/grsharman/detritalPy/blob/master/detritalPy_Manual_v1.3.17.pdf). Dr. Jeff Amato (New Mexico State University) has put together a beginner's guide to detritalPy (geared towards MacOS) that can be found [here](https://geology.nmsu.edu/files/2020/04/DetritalPyForMacManual.pdf).
 
 ## Data Import and Selection
 
