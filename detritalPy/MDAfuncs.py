@@ -387,7 +387,7 @@ def YSP(ages, errors, min_cluster_size=2, MSWD_threshold=1):
 
             YSP_WM, YSP_WM_err2s, YSP_WM_MSWD = dFunc.weightedMean(np.array([d[0] for d in agesFiltered]), np.array([d[1] for d in agesFiltered]))
 
-            if agesFiltered[1][2] < 1: # The first one is excluded because the MSWD is made to be 0. The second youngest analysis must have a MSWD < 1 to proceed
+            if (agesFiltered[1][2] < 1 and len(agesFiltered) >= min_cluster_size): # The first one is excluded because the MSWD is made to be 0. The second youngest analysis must have a MSWD < 1 to proceed. The minimum cluster size must also be met or exceeded.
                 YSP.append([YSP_WM, YSP_WM_err2s, YSP_WM_MSWD, len(agesFiltered)])
                 break
             else:

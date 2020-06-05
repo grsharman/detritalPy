@@ -2137,8 +2137,8 @@ class MDS_class:
     bw : KDE bandwidth. Options are 'optimizedFixed', 'optimizedVariable', or a number (bandwidth in Myr) (default is 'optimizedFixed')
     n_init : the number of initializations used in the MDS calculation. The final answer will be the initialation that results in the lowest stress value (default = 1000)
     max_iter : the maximum number of iterations the MDS algorthm will run for a given initialization (default = 1000)
-    x1 : lower limit (Myr) of age distribution to conduct MDS analysis on (default = 0)
-    x2 : upper limit (Myr) of age distribution to conduct MDS analysis on (default = 4500)
+    x1 : lower limit (Ma) of age distribution to conduct MDS analysis on (default = 0)
+    x2 : upper limit (Ma) of age distribution to conduct MDS analysis on (default = 4500)
     xdif : interval (Myr) over which distributions are calculated (default = 1)
     min_dim : the minimum number of dimensions over which to calculate MDS (default = 1)
     max_dim : the maximum number of dimensions over which to calculate MDS (default = 3)
@@ -2149,7 +2149,7 @@ class MDS_class:
     See Vermeesch (2013): Chemical Geology (https://doi.org/10.1016/j.chemgeo.2013.01.010) and the documentation of sklearn.manifold.MDS for more information on multidimensional scaling
 
     """
-    def __init__(self, ages, errors, labels, sampleList, metric=False, criteria='Vmax', bw='optimizedFixed', n_init=1000, max_iter=1000, x1=0, x2=4500, xdif=1, min_dim=1, max_dim=3, dim=2):
+    def __init__(self, ages, errors, labels, sampleList, metric=False, criteria='Vmax', bw='optimizedFixed', n_init='metric', max_iter=1000, x1=0, x2=4500, xdif=1, min_dim=1, max_dim=3, dim=2):
         # Import required modules
         from scipy import stats
         from sklearn import manifold
@@ -2165,7 +2165,7 @@ class MDS_class:
         self.n_init = n_init
         self.max_iter = max_iter
 
-        # Calculate the distributions from which to compute the difference matrix
+        # Calculate the distributions from which to compute the dissimilarity matrix
         if self.criteria == 'Dmax' or self.criteria == 'Vmax':
             self.CDF = CDFcalcAges(self.ages)[1]
 
@@ -2179,26 +2179,36 @@ class MDS_class:
             if type(bw) != str:
                 self.KDE = KDEcalcAges_2(ages=self.ages, x1=x1, x2=x2, xdif=xdif, cumulative=False)[1]
 
-        # Calculate the difference matrix
+        # Calculate the dissimilarity matrix
         self.matrix = np.empty(shape=(len(self.ages),len(self.ages))) # Empty matrix of appropriate shape
         for i in range(len(self.ages)):
             for j in range(len(self.ages)):
                 if self.criteria == 'Dmax':
                     self.matrix[i,j] = stats.ks_2samp(self.ages[i],self.ages[j])[0]
+                    self.label = 'Dmax'
                 if self.criteria == 'Vmax':
                     self.matrix[i,j] = calcVmax(self.CDF[i], self.CDF[j])
+                    self.label = 'Vmax'
+                # The following criteria are similarity metrics. Following Saylor and Sundell (2016), we
+                # transform similarity into dissimilarity as sqrt(1-D)
                 if self.criteria == 'R2-PDP':
-                    self.matrix[i,j] = calcComplR2(self.PDP[i], self.PDP[j])
+                    self.matrix[i,j] = np.sqrt(calcComplR2(self.PDP[i], self.PDP[j]))
+                    self.label = 'sqrt(1 - R\u00b2-PDP)'
                 if self.criteria == 'R2-KDE':
-                    self.matrix[i,j] = calcComplR2(self.KDE[i], self.KDE[j])
+                    self.matrix[i,j] = np.sqrt(calcComplR2(self.KDE[i], self.KDE[j]))
+                    self.label = 'sqrt(1 - R\u00b2-KDE)'
                 if self.criteria == 'similarity-PDP':
-                    self.matrix[i,j] = 1-calcSimilarity(self.PDP[i], self.PDP[j])
+                    self.matrix[i,j] = np.sqrt(1-np.around(calcSimilarity(self.PDP[i], self.PDP[j]),5)) # Rounding to nearest 5 decimals to avoid numerical noise causing negative numbers
+                    self.label = 'sqrt(1 - similarity-PDP)'
                 if self.criteria == 'similarity-KDE':
-                    self.matrix[i,j] = 1-calcSimilarity(self.KDE[i], self.KDE[j])
+                    self.matrix[i,j] = np.sqrt(1-np.around(calcSimilarity(self.KDE[i], self.KDE[j]),5)) # Rounding to nearest 5 decimals to avoid numerical noise causing negative numbers
+                    self.label = 'sqrt(1 - similarity-KDE)'
                 if self.criteria == 'likeness-PDP':
-                    self.matrix[i,j] = 1-calcLikeness(self.PDP[i], self.PDP[j])
+                    self.matrix[i,j] = np.sqrt(1-calcLikeness(self.PDP[i], self.PDP[j]))
+                    self.label = 'sqrt(1 - similarity-PDP)'
                 if self.criteria == 'likeness-KDE':
-                    self.matrix[i,j] = 1-calcLikeness(self.KDE[i], self.KDE[j])
+                    self.matrix[i,j] = np.sqrt(1-calcLikeness(self.KDE[i], self.KDE[j]))
+                    self.label = 'sqrt(1 - similarity-KDE)'
         self.min_dim = min_dim
         self.max_dim = max_dim
         self.dim = dim
@@ -2207,18 +2217,28 @@ class MDS_class:
         self.distancesArray = []
         self.y_distancesArray = []
         self.x_dissimilarityArray = []
-        self.stress1Array = []
+        #self.stress1Array = []
 
         # Loop through and perform MDS for each number of dimensions considered
         for i in range(max_dim-min_dim+1):
-            if self.metric: # Metric or classical MDS
-                mds = manifold.MDS(n_components = min_dim+i, random_state=1, dissimilarity='precomputed', n_init = self.n_init, max_iter= self.max_iter)
-                m = mds.fit_transform(self.matrix)
-                stress = mds.fit(self.matrix).stress_
-            else: # Non-metric MDS
-                mds = manifold.MDS(n_components = min_dim+i, metric=False, random_state=1, dissimilarity='precomputed', n_init = self.n_init, max_iter= self.max_iter)
-                m = mds.fit_transform(self.matrix) #, init=pos)
-                stress = mds.fit(self.matrix).stress_
+            if self.metric or self.n_init == 'metric': # Perform metric MDS
+                self.mds = manifold.MDS(n_components = min_dim+i, random_state=1, dissimilarity='precomputed', max_iter= self.max_iter)
+                self.pos = self.mds.fit(self.matrix).embedding_
+                stress = self.mds.fit(self.matrix).stress_
+                if not self.metric: # Non-metric MDS (metric MDS  used as initial configuration)
+                    self.nmds = manifold.MDS(n_components = min_dim+i, metric=False, random_state=1, dissimilarity='precomputed', n_init = 1, max_iter= self.max_iter)
+                    self.npos = self.nmds.fit_transform(self.matrix, init=self.pos)
+                    stress = self.nmds.fit(self.matrix, init=self.pos).stress_
+            else: # Non-metric MDS (metric MDS not used as initial configuration)
+                self.nmds = manifold.MDS(n_components = min_dim+i, metric=False, random_state=1, dissimilarity='precomputed', n_init = self.n_init, max_iter= self.max_iter)
+                self.npos = self.nmds.fit_transform(self.matrix)
+                stress = self.nmds.fit(self.matrix).stress_
+
+            if self.metric:
+                m = self.pos
+            else:
+                m = self.npos
+
             self.stressArray.append(stress)
             self.mArray.append(m)
 
@@ -2241,16 +2261,17 @@ class MDS_class:
             self.y_distancesArray.append(self.y_distances)
             self.x_dissimilarityArray.append(self.x_dissimilarity)
 
-            # Calculate the Stres-1 of Kruskal (1964) following Vermeesch (2013): Chemical Geology
-            for i in range(len(self.x_dissimilarity)):
-                S1_numerator = []
-                S1_denominator = []
-                for j in range(len(self.x_dissimilarity)):
-                    S1_numerator.append(((self.x_dissimilarity[j]-self.y_distances[j])**2))
-                    S1_denominator.append(self.y_distances[j]**2)
-            self.stress1Array.append(np.sqrt(np.sum(S1_numerator)/np.sum(S1_denominator)))
+            # Calculate the Stress-1 of Kruskal (1964) following Vermeesch (2013): Chemical Geology
+            # As of v.1.3.18, Stress-1 is no longer calculated
+            #for i in range(len(self.x_dissimilarity)):
+            #    S1_numerator = []
+            #    S1_denominator = []
+            #    for j in range(len(self.x_dissimilarity)):
+            #        S1_numerator.append(((self.x_dissimilarity[j]-self.y_distances[j])**2))
+            #        S1_denominator.append(self.y_distances[j]**2)
+            #self.stress1Array.append(np.sqrt(np.sum(S1_numerator)/np.sum(S1_denominator)))
 
-    def QQplot(self, figsize=(10,10), savePlot=True, fileName='QQplot.pdf', halfMatrix=True):
+    def QQplot(self, figsize=(12,12), savePlot=True, fileName='QQplot.pdf', halfMatrix=True):
         """
         This function creates a QQ plot that illustrates a comparison of sample-to-sample CDFs
 
@@ -2277,11 +2298,11 @@ class MDS_class:
                     ax[i,j].axis('off')
                     continue                       
                 else:
-                    if (self.criteria == 'R2-PDP'):
+                    if (self.criteria == 'R2-PDP' or self.criteria == 'similarity-PDP' or self.criteria == 'likeness-PDP'):
                         ax[i,j].plot(np.cumsum(self.PDP[i]),np.cumsum(self.PDP[j]),'-',color='red')
-                    if (self.criteria == 'R2-KDE'):
+                    if (self.criteria == 'R2-KDE' or self.criteria == 'similarity-KDE' or self.criteria == 'likeness-KDE'):
                         ax[i,j].plot(np.cumsum(self.KDE[i]),np.cumsum(self.KDE[j]),'-',color='red')
-                    else:
+                    if self.criteria == 'Vmax' or self.criteria == 'Dmax':
                         ax[i,j].plot(self.CDF[i],self.CDF[j],'-',color='red')
                     ax[i,j].plot([0,1],[0,1],'--',color='black')
                     ax[i,j].get_xaxis().set_ticks([])
@@ -2300,7 +2321,7 @@ class MDS_class:
         figQQ.subplots_adjust(wspace=0)
         figQQ.subplots_adjust(hspace=0)
 
-    def heatMap(self, figsize=(10,10), savePlot=True, fileName='HeatMapPlot.pdf', plotValues=True, plotType = 'dissimilarity', fontsize=8):
+    def heatMap(self, figsize=(10,10), savePlot=True, fileName='HeatMapPlot.pdf', plotValues=True, plotType = 'dissimilarity', fontsize=10):
         """
         This function creates a heatmap of dissimilarity values used in the MDS calculation
 
@@ -2330,7 +2351,7 @@ class MDS_class:
         ax.set_xticklabels(self.sampleList)
         ax.set_yticklabels(self.sampleList)
         cbar = figHeatMap.colorbar(im)
-        cbar.set_label(label=self.criteria)
+        cbar.set_label(label=self.label)
         if plotValues:
             for i in range(len(self.ages)):
                 for j in range(len(self.ages)):
@@ -2345,7 +2366,7 @@ class MDS_class:
             pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
             figHeatMap.savefig('Output/'+fileName)
 
-    def stressPlot(self, figsize=(10,10), savePlot=True, fileName='stressPlot.pdf', stressType='Stress-1'):
+    def stressPlot(self, figsize=(6,6), savePlot=True, fileName='stressPlot.pdf', stressType='sklearn'):
         """
         This function creates a plot of stress vs number of dimensions
 
@@ -2360,7 +2381,6 @@ class MDS_class:
         fileName : name of the file being saved, if savePlot == True (default = 'stressPlot.pdf')
         stressType : Set to 'sklearn' to use the stress as calculated by the sklearn.Manifold.MDS 
                     module: "The final value of the stress (sum of squared distance of the disparities and the distances for all constrained points)".
-                    Set to 'Stress-1' to calculate the stress following Kruskal (1964) - see Vermeesch (2013): Chemical Geology. (default = 'Stress-1')
 
         Notes
         -----
@@ -2370,14 +2390,15 @@ class MDS_class:
             print('Only one dimension modeled! Cannot plot stress vs number of dimensions')
         else:
             figStress, ax = plt.subplots(figsize=figsize)
-            if stressType == 'sklearn':
+            if stressType == 'sklearn' or stressType == 'Stress-1':
                 ax.plot(np.arange(self.max_dim)+1, self.stressArray,'o', markerfacecolor='white', markeredgecolor='black')
                 ax.plot(np.arange(self.max_dim)+1, self.stressArray, '-', color='black')
                 ax.set_ylabel('Final stress (the sum of squared distance of the disparities \nand the distances for all constrained points)')
             if stressType == 'Stress-1':
-                ax.plot(np.arange(self.max_dim)+1, self.stress1Array,'o', markerfacecolor='white', markeredgecolor='black')
-                ax.plot(np.arange(self.max_dim)+1, self.stress1Array, '-', color='black')
-                ax.set_ylabel('Stress-1 (Kruskal, 1964)')
+                print('Warning: Stress-1 no longer supported. Stress returned by sklearn.manifold.MDS is returned instead')
+                #ax.plot(np.arange(self.max_dim)+1, self.stress1Array,'o', markerfacecolor='white', markeredgecolor='black')
+                #ax.plot(np.arange(self.max_dim)+1, self.stress1Array, '-', color='black')
+                #ax.set_ylabel('Stress-1 (Kruskal, 1964)')
             ax.set_xlim(min(np.arange(self.max_dim)+1), max(np.arange(self.max_dim)+1))
 
             ax.set_xlabel('Number of dimensions')
@@ -2385,7 +2406,7 @@ class MDS_class:
                 pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
                 figStress.savefig('Output/'+fileName)
 
-    def shepardPlot(self, figsize=(10,10), savePlot=True, fileName='shepardPlot.pdf', plotOneToOneLine=False, equalAspect=False):  # Make a Shepard plot
+    def shepardPlot(self, figsize=(6,6), savePlot=True, fileName='shepardPlot.pdf', plotOneToOneLine=False, equalAspect=False):  # Make a Shepard plot
         """
         This function creates a plot of euclidean distance (i.e., sample-to-sample distance on the MDS plot) versus dissimilarity value. 
         Samples that are similar should be closer together than samples that are more different.
@@ -2421,8 +2442,8 @@ class MDS_class:
             pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
             figShepard.savefig('Output/'+fileName)
 
-    def MDSplot(self, figsize=(10,10), savePlot=True, fileName='MDSplot.pdf', plotPie=False, pieSize=0.05, agebins=None, agebinsc=None, pieType='Age', 
-        pieCategories=None, df=None, axes=None, colorBy='Default', plotLabels=True, equalAspect=True, stressType='Stress-1'):
+    def MDSplot(self, figsize=(6,6), savePlot=True, fileName='MDSplot.pdf', plotPie=False, pieSize=0.05, agebins=None, agebinsc=None, pieType='Age', 
+        pieCategories=None, df=None, axes=None, colorBy='Default', plotLabels=True, equalAspect=True, stressType='sklearn'):
         """
         Plot the results of the MDS analysis
 
@@ -2550,8 +2571,9 @@ class MDS_class:
                 figMDS.savefig('Output/'+fileName)
 
         if stressType == 'Stress-1':
-            print('Final stress: ',self.stress1Array[self.dim-self.min_dim])
-        if stressType == 'sklearn':
+            print('Warning: Stress-1 no longer supported. Stress returned by sklearn.manifold.MDS is returned instead')
+            #print('Final stress: ',self.stress1Array[self.dim-self.min_dim])
+        if stressType == 'sklearn' or stressType == 'Stress-1':
             print('Final stress: ',self.stressArray[self.dim-self.min_dim])
     
 def MDS(ages, errors, labels, sampleList, metric=False, plotWidth='10', plotHeight='8', plotPie=False, pieSize=0.05, agebins=None, agebinsc=None, criteria='Dmax', bw='optimizedFixed', color='Default', main_byid_df=None, plotLabels=True):
