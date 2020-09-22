@@ -553,7 +553,7 @@ def fftkernel(x, w):
     X = np.fft.fft(x, n.astype(np.int))
 
     # generate kernel domain
-    f = np.linspace(0, n-1, n) / n
+    f = np.linspace(0, n-1, np.int(n)) / n
     f = np.concatenate((-f[0: np.int(n / 2 + 1)],
                         f[1: np.int(n / 2 - 1 + 1)][::-1]))
 
@@ -574,8 +574,8 @@ def fftkernelWin(x, w, WinFunc):
     n = 2 ** np.ceil(np.log2(Lmax))
     X = np.fft.fft(x, n.astype(np.int))
 
-    # generate kernel domain
-    f = np.linspace(0, n-1, n) / n
+    # generate kernel domain ###
+    f = np.linspace(0, n-1, np.int(n)) / n
     f = np.concatenate((-f[0: np.int(n / 2 + 1)],
                         f[1: np.int(n / 2 - 1 + 1)][::-1]))
     t = 2 * np.pi * f
