@@ -97,14 +97,19 @@ def loadDataExcel(dataToPlot, mainSheet = 'Samples', dataSheet = 'ZrUPb', ID_col
             active_sample_id = main_df.loc[sample_ind,ID_col]
             active_UPb_data = dfs[dataSheet].loc[dfs[dataSheet][ID_col].isin([active_sample_id]),:]
             for colname in active_UPb_data:
-                if colname not in [ID_col]:
-                    # Make colname if not already in dataframe
-                    if colname not in main_df.columns:
-                        main_df[colname] = (np.nan*np.empty(shape=(len(main_df),1))).tolist()
-                        #main_df[colname] = (np.nan*np.ones(main_df.shape)).tolist()
-                        main_df[colname] = np.asarray(main_df[colname])
-                        #main_df[colname] = main_df[colname].astype(np.ndarray)
-                    main_df.at[sample_ind,colname] = active_UPb_data[colname].values
+                if colname not in [ID_col]: # Skip if the indexing column
+                    # Check column naming overlap with the Samples table (having the same column name will otherwise result in an error)
+                    if colname in samples_df.columns:
+                        colname_adj = colname+'_'+dataSheet # New name for colname
+                        if colname_adj not in main_df.columns: # Make colname with revised name if already in samples table
+                            main_df[colname_adj] = (np.nan*np.empty(shape=(len(main_df),1))).tolist()
+                            main_df[colname_adj] = np.asarray(main_df[colname_adj])                
+                        main_df.at[sample_ind,colname_adj] = active_UPb_data[colname].values
+                    else:
+                        if colname not in main_df.columns: # Make colname with revised name if already in samples table
+                            main_df[colname] = (np.nan*np.empty(shape=(len(main_df),1))).tolist()
+                            main_df[colname] = np.asarray(main_df[colname])
+                        main_df.at[sample_ind,colname] = active_UPb_data[colname].values
     
         # Make a copy of the dataset and set the sample ID as index
         main_byid_df = main_df.copy()
@@ -184,6 +189,7 @@ def sampleToData(sampleList, main_byid_df, sampleLabel='Sample_ID', bestAge='Bes
     errors = []
     numGrains = []
     labels = []
+    stop = False
 
     if type(sampleList[0])==tuple:
         for i in range(N):
@@ -193,6 +199,7 @@ def sampleToData(sampleList, main_byid_df, sampleLabel='Sample_ID', bestAge='Bes
                 print('These samples are not in the database - check for typos!')
                 print(list(np.setdiff1d(sampleList[i][0],list(main_byid_df.Sample_ID))))
                 print('Function stopped')
+                stop = True
                 break
             sampleAges = []
             sampleErrors = []
@@ -206,6 +213,7 @@ def sampleToData(sampleList, main_byid_df, sampleLabel='Sample_ID', bestAge='Bes
             errors.append(sampleErrors)
             numGrains.append(len(sampleAges))
             labels.append(sampleList[i][1])
+
     else:
         for sample in sampleList:
             # Verify that all samples are in the database
@@ -213,6 +221,7 @@ def sampleToData(sampleList, main_byid_df, sampleLabel='Sample_ID', bestAge='Bes
                 print('These samples are not in the database - check for typos!')
                 print(list(np.setdiff1d(sampleList,list(main_byid_df.Sample_ID))))
                 print('Function stopped')
+                stop = True
                 break            
             ages.append(main_byid_df.loc[sample, bestAge])
             if sigma == '2sigma':
@@ -221,6 +230,12 @@ def sampleToData(sampleList, main_byid_df, sampleLabel='Sample_ID', bestAge='Bes
                 errors.append(main_byid_df.loc[sample, bestAgeErr])
             numGrains.append(len(main_byid_df.loc[sample, bestAge]))
             labels.append(main_byid_df.loc[sample,sampleLabel])
+
+    if not stop: # Only check for missing data if function not terminated beforehand
+        if np.min([len(x) for x in ages]) == 0: # Check whether any of the samples returned no data
+            samples_no_data = np.asarray(sampleList)[[len(x)==0 for x in ages]] # Return a list of the samples with no data
+            print('Warning! These samples have no data: ',samples_no_data)
+            print('Please check for consistency in sample naming')
 
     return ages, errors, numGrains, labels
 
