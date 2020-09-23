@@ -506,8 +506,8 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                 KDE_age, KDE = KDEcalcAgesLocalAdapt(ages=ages, x1=0, x2=4500, xdif=xdif, cumulative=False)
             if bw == 'optimizedVariable':
                 KDE_age, KDE = KDEcalcAgesGlobalAdapt(ages=ages, x1=0, x2=4500, xdif=xdif, cumulative=False)
-            if type(bw) != str:
-                KDE_age, KDE = KDEcalcAges_2(ages=ages, x1=0, x2=4500, xdif=xdif, bw=bw, cumulative=False)
+            if bw == 'ISJ' or bw == 'scott' or bw == 'silverman' or type(bw) != str:
+                 KDE_age, KDE = KDEcalcAges_KDEpy(ages=ages, x1=0, x2=4500, xdif=xdif, bw=bw, cumulative=False)               
         if plotPDP or (plotHeatMap and heatMapType == 'PDP'):
             PDP_age, PDP = PDPcalcAges(ages=ages, errors=errors, x1=0, x2=4500, xdif=xdif, cumulative=False)
         if plotAgePeaks:
@@ -584,8 +584,8 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                     CKDE_age, CKDE = KDEcalcAgesLocalAdapt(ages=ages, x1=0, x2=4500, xdif=xdif, cumulative=True)
                 if bw == 'optimizedVariable':
                     CKDE_age, CKDE = KDEcalcAgesGlobalAdapt(ages=ages, x1=0, x2=4500, xdif=xdif, cumulative=True)
-                if type(bw) != str:
-                    CKDE_age, CKDE = KDEcalcAges_2(ages=ages, x1=0, x2=4500, xdif=xdif, bw=bw, cumulative=True)
+                if bw == 'ISJ' or bw == 'scott' or bw == 'silverman' or type(bw) != str:
+                     CKDE_age, CKDE = KDEcalcAges_KDEpy(ages=ages, x1=0, x2=4500, xdif=xdif, bw=bw, cumulative=True)    
                 for i in range(len(sampleList)):
                     axs[0,h+1].plot(CKDE_age, CKDE[i], color=colorMe(i), alpha=1, lw=CDFlw, label=labels[i]+(', N=(%d' % N[i])+(', %d' % numGrainsPlotted[i])+('/%d' % numGrains[i])+(')'))
                     if plotDKW:
@@ -977,8 +977,8 @@ def plotAll_2(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                 CKDE_age, CKDE = KDEcalcAgesLocalAdapt(ages=ages, x1=0, x2=4500, xdif=xdif, cumulative=True)
             if bw == 'optimizedVariable':
                 CKDE_age, CKDE = KDEcalcAgesGlobalAdapt(ages=ages, x1=0, x2=4500, xdif=xdif, cumulative=True)
-            if type(bw) != str:
-                CKDE_age, CKDE = KDEcalcAges_2(ages=ages, x1=0, x2=4500, xdif=xdif, bw=bw, cumulative=True)
+            if bw == 'ISJ' or bw == 'scott' or bw == 'silverman' or type(bw) != str:
+                CKDE_age, CKDE = KDEcalcAges_KDEpy(ages=ages, x1=0, x2=4500, xdif=xdif, bw=bw, cumulative=True)
             for i in range(len(sampleList)):
                 axs[0,0].plot(CKDE_age, CKDE[i], color=colorMe(i), alpha=1, lw=CDFlw, label=str(labels[i])+(', N=(%d' % N[i])+(', %d' % numGrainsPlotted[i])+('/%d' % numGrains[i])+(')'))
                 if plotDKW:
@@ -1016,8 +1016,8 @@ def plotAll_2(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                 KDE_age, KDE = KDEcalcAgesLocalAdapt(ages=ages, x1=0, x2=4500, xdif=xdif, cumulative=False)
             if bw == 'optimizedVariable':
                 KDE_age, KDE = KDEcalcAgesGlobalAdapt(ages=ages, x1=0, x2=4500, xdif=xdif, cumulative=False)
-            if type(bw) != str:
-                KDE_age, KDE = KDEcalcAges_2(ages=ages, x1=0, x2=4500, xdif=xdif, bw=bw, cumulative=False)
+            if bw == 'ISJ' or bw == 'scott' or bw == 'silverman' or type(bw) != str:
+                KDE_age, KDE = KDEcalcAges_KDEpy(ages=ages, x1=0, x2=4500, xdif=xdif, bw=bw, cumulative=False)
             # Determine the maximum KDE value for each sample or sample group
             KDEmax = np.empty(shape=(n,1))
             np.zeros_like(numGrains)
@@ -1396,8 +1396,8 @@ def plotDouble(sampleList, main_byid_df, ages, errors, numGrains, labels, variab
                 KDE_age, KDE = KDEcalcAgesLocalAdapt(ages=ages, x1=0, x2=4500, xdif=xdif, cumulative=False)
             if bw == 'optimizedVariable':
                 KDE_age, KDE = KDEcalcAgesGlobalAdapt(ages=ages, x1=0, x2=4500, xdif=xdif, cumulative=False)
-            if type(bw) != str:
-                KDE_age, KDE = KDEcalcAges_2(ages=ages, x1=0, x2=4500, xdif=xdif, bw=bw, cumulative=False)
+            if bw == 'ISJ' or bw == 'scott' or bw == 'silverman' or type(bw) != str:
+                KDE_age, KDE = KDEcalcAges_KDEpy(ages=ages, x1=0, x2=4500, xdif=xdif, bw=bw, cumulative=False)
         if plotPDP:
             PDP_age, PDP = PDPcalcAges(ages=ages, errors=errors, x1=x1, x2=x2, xdif=xdif, cumulative=False)
             
@@ -1845,10 +1845,10 @@ def plotFoliumMap(sampleList, main_byid_df, ages, errors, numGrains, plotMapKDE,
                     dist = KDEcalcAgesLocalAdapt(ages=ages, x1=0, x2=x2, xdif=1, cumulative=False)
                 if bw == 'optimizedVariable':
                     dist = KDEcalcAgesGlobalAdapt(ages=ages, x1=0, x2=x2, xdif=1, cumulative=False)            
-                if type(bw) != str:
-                    dist = KDEcalcAges_2(ages, x1=0, x2=x2, xdif=1, bw=bw)
+                if bw == 'ISJ' or bw == 'scott' or bw == 'silverman' or type(bw) != str:
+                    dist = KDEcalcAges_KDEpy(ages, x1=0, x2=x2, xdif=1, bw=bw)
             if (plotMapKDE and plotCumulative):
-                dist = KDEcalcAges_2(ages, x1=0, x2=x2, bw=bw, xdif=1, cumulative=True)
+                dist = KDEcalcAges_KDEpy(ages, x1=0, x2=x2, bw=bw, xdif=1, cumulative=True)
             if (plotMapPDP and not plotCumulative):
                 dist = PDPcalcAges(ages, errors, x1=0, x2=x2, xdif=1)
             if (plotMapPDP and plotCumulative):
@@ -1893,15 +1893,15 @@ def plotFoliumMap(sampleList, main_byid_df, ages, errors, numGrains, plotMapKDE,
                 dist = KDEcalcAgesLocalAdapt(ages=ages, x1=0, x2=x2, xdif=1, cumulative=False)
             if bw == 'optimizedVariable':
                 dist = KDEcalcAgesGlobalAdapt(ages=ages, x1=0, x2=x2, xdif=1, cumulative=False)            
-            if type(bw) != str:
-                dist = KDEcalcAges_2(ages, x1=0, x2=x2, xdif=1, bw=bw)
+            if bw == 'ISJ' or bw == 'scott' or bw == 'silverman' or type(bw) != str:
+                dist = KDEcalcAges_KDEpy(ages, x1=0, x2=x2, xdif=1, bw=bw)
         if (plotMapKDE and plotCumulative):
             if bw == 'optimizedFixed':
                 dist = KDEcalcAgesLocalAdapt(ages=ages, x1=0, x2=x2, xdif=1, cumulative=True)
             if bw == 'optimizedVariable':
                 dist = KDEcalcAgesGlobalAdapt(ages=ages, x1=0, x2=x2, xdif=1, cumulative=True)               
-            if type(bw) != str:
-                dist = KDEcalcAges_2(ages, x1=0, x2=x2, bw=bw, xdif=1, cumulative=True)
+            if bw == 'ISJ' or bw == 'scott' or bw == 'silverman' or type(bw) != str:
+                dist = KDEcalcAges_KDEpy(ages, x1=0, x2=x2, bw=bw, xdif=1, cumulative=True)
         if (plotMapPDP and not plotCumulative):
             dist = PDPcalcAges(ages, errors, x1=0, x2=x2, xdif=1, cumulative=False)
         if (plotMapPDP and plotCumulative):
@@ -2191,8 +2191,8 @@ class MDS_class:
                 self.KDE = KDEcalcAgesLocalAdapt(ages=self.ages, x1=x1, x2=x2, xdif=xdif, cumulative=False)[1]
             if bw == 'optimizedVariable':
                 self.KDE = KDEcalcAgesGlobalAdapt(ages=self.ages, x1=x1, x2=x2, xdif=xdif, cumulative=False)[1]
-            if type(bw) != str:
-                self.KDE = KDEcalcAges_2(ages=self.ages, x1=x1, x2=x2, xdif=xdif, cumulative=False)[1]
+            if bw == 'ISJ' or bw == 'scott' or bw == 'silverman' or type(bw) != str:
+                self.KDE = KDEcalcAges_KDEpy(ages=self.ages, x1=x1, x2=x2, xdif=xdif, cumulative=False)[1]
 
         # Calculate the dissimilarity matrix
         self.matrix = np.empty(shape=(len(self.ages),len(self.ages))) # Empty matrix of appropriate shape
@@ -2641,8 +2641,8 @@ def MDS(ages, errors, labels, sampleList, metric=False, plotWidth='10', plotHeig
             dist = KDEcalcAgesLocalAdapt(ages=ages, x1=0, x2=4500, xdif=1, cumulative=False)[1]
         if bw == 'optimizedVariable':
             dist = KDEcalcAgesGlobalAdapt(ages=ages, x1=0, x2=4500, xdif=1, cumulative=False)[1]
-        if type(bw) != str:
-            dist = KDEcalcAges_2(ages=ages, x1=0, x2=4500, xdif=1, bw=bw, cumulative=False)[1]
+        if bw == 'ISJ' or bw == 'scott' or bw == 'silverman' or type(bw) != str:
+            dist = KDEcalcAges_KDEpy(ages=ages, x1=0, x2=4500, xdif=1, bw=bw, cumulative=False)[1]
     for i in range(len(ages)):
         for j in range(len(ages)):
             if criteria == 'Dmax':
@@ -2853,8 +2853,8 @@ def plotDoubleDating(main_byid_df, sampleList, x1, x2, y1, y2, plotKDE, colorKDE
                 xKDE = KDEcalcAgesLocalAdapt(ages=x, xdif=xdif)
             if bw == 'optimizedVariable':
                 xKDE = KDEcalcAgesGlobalAdapt(ages=x, xdif=xdif)
-            if type(bw) != str:
-                xKDE = KDEcalcAges_2(ages=x, xdif=xdif, bw=bw)
+            if bw == 'ISJ' or bw == 'scott' or bw == 'silverman' or type(bw) != str:
+                xKDE = KDEcalcAges_KDEpy(ages=x, xdif=xdif, bw=bw)
             #xKDE = KDEcalcAges_2(ages=x, bw=bw, xdif=xdif)
             axsKDE = axs[1,0].twinx()
             axsKDE.plot(xKDE[0],xKDE[1][0], color='black', lw=1)
@@ -2921,8 +2921,8 @@ def plotDoubleDating(main_byid_df, sampleList, x1, x2, y1, y2, plotKDE, colorKDE
                 yKDE = KDEcalcAgesLocalAdapt(ages=[yF], xdif=xdif)
             if bw == 'optimizedVariable':
                 yKDE = KDEcalcAgesGlobalAdapt(ages=[yF], xdif=xdif)
-            if type(bw) != str:
-                yKDE = KDEcalcAges_2(ages=[yF], xdif=xdif, bw=bw)            
+            if bw == 'ISJ' or bw == 'scott' or bw == 'silverman' or type(bw) != str:
+                yKDE = KDEcalcAges_KDEpy(ages=[yF], xdif=xdif, bw=bw)            
             axsKDE = axs[0,1].twiny()
             axsKDE.plot(yKDE[1][0],yKDE[0], color='black', lw=1)
             axsKDE.set_ylim(y1, y2)
@@ -2992,8 +2992,8 @@ def exportDist(ages, errors, labels, exportType, cumulative, x1, x2, xdif, bw, f
             distAge, dist = KDEcalcAgesLocalAdapt(ages, x1, x2, xdif, cumulative)
         if bw == 'optimizedVariable':
             distAge, dist = KDEcalcAgesGlobalAdapt(ages, x1, x2, xdif, cumulative)
-        if type(bw) != str:
-            distAge, dist = KDEcalcAges_2(ages, x1, x2, xdif, bw, cumulative)       
+        if bw == 'ISJ' or bw == 'scott' or bw == 'silverman' or type(bw) != str:
+            distAge, dist = KDEcalcAges_KDEpy(ages, x1, x2, xdif, bw, cumulative)       
     if exportType == 'PDP':
         distAge, dist = PDPcalcAges(ages, errors, x1, x2, xdif, cumulative)
     
@@ -3105,8 +3105,8 @@ def calcComparisonCSV(ages, errors, numGrains, labels, sampleList, calculateSimi
                 dist = KDEcalcAgesLocalAdapt(ages)[1]
             if bw == 'optimizedVariable':
                 dist = KDEcalcAgesGlobalAdapt(ages)[1]
-            if type(bw) != str:
-                dist = KDEcalcAges_2(ages, bw=bw)[1]
+            if bw == 'ISJ' or bw == 'scott' or bw == 'silverman' or type(bw) != str:
+                dist = KDEcalcAges_KDEpy(ages, bw=bw)[1]
     
     pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
     with open(str('Output/' + fileName), 'w', newline='') as f: #Select the CSV file to save data to , 'wb'
@@ -3291,8 +3291,8 @@ def PDPcalcAges(ages, errors, x1=0, x2=4500, xdif=1, cumulative=False):
     ----------
     ages : array of ages, len(ages)=number of samples or sample groups
     errors : array of 1s errors
-    x1 : (optional) beginning of range to compute PDP (default = 0 Ma)
-    x2 : (optional) end of range to compute PDP (default = 4500 Ma)
+    x1 : (optional) beginning of range to return PDP (default = 0 Ma)
+    x2 : (optional) end of range to return PDP (default = 4500 Ma)
     xdif : (optional) bin size to compute PDP (default = 1 Ma)
     cumulative : (optional) If True, will compute a cumulative PDP (CPDP)
     
@@ -3363,6 +3363,45 @@ def KDEcalcAges_2(ages, x1=0, x2=4500, xdif=1, bw=2.5, cumulative=False):
         KDE[i,:] = kde
     return KDE_age, KDE    
 
+def KDEcalcAges_KDEpy(ages, x1=0, x2=4500, xdif=1, bw=2.5, cumulative=False):
+    """
+    Computes the KDE for an array of ages.
+    Uses the KDEpy library
+    
+    Parameters
+    ----------
+    ages : array of ages, len(ages)=number of samples or sample groups
+    x1 : (optional) beginning of range to return KDE (default = 0 Ma)
+    x2 : (optional) end of range to return KDE (default = 4500 Ma)
+    xdif : (optional) bin size to compute KDE (default = 1 Ma)
+    bw : (optional) bandwidth used in KDE calculation (default = 2.5 Ma)
+    cumulative : (optional) If True, will compute a cumulative KDE (CKDE) (default = False)
+    
+    Returns
+    -------
+    KDE_age : array of ages that KDE is computed over    
+    KDE : array of KDE functions
+    
+    Notes
+    -----
+    """    
+    from KDEpy import FFTKDE
+
+    KDE_age = np.arange(0, 4500+xdif, xdif) # Ensures that the KDE is calculated over all of geologic time
+    KDE = np.zeros(shape=(len(ages),len(KDE_age)))
+    for i in range(len(ages)):
+        kde = FFTKDE(bw=bw, kernel='gaussian').fit(ages[i]).evaluate(KDE_age)
+        if cumulative:
+            kde = np.cumsum(kde)*xdif # Seems like this must be multiplied by xdif for it to work
+        KDE[i,:] = kde
+    KDE_age = KDE_age[int(x1/xdif):int((x2+xdif)/xdif)] # Only select the values within the specified plotting age range
+    KDEportionRange = np.arange(x1, x2+xdif, xdif)
+    KDEportionEmpty = np.empty(shape=(len(ages),len(KDEportionRange)))
+    KDEportion = np.zeros_like(KDEportionEmpty) # Copy the array, but with zeros
+    for i in range(len(ages)):
+        KDEportion[i] = KDE[i][int(x1/xdif):int((x2+xdif)/xdif)] # Only select the values within the specified plotting age range
+    return KDE_age, KDEportion 
+
 def KDEcalcAgesLocalAdapt(ages, x1=0, x2=4500, xdif=1, cumulative=False):
     """
     Computes the KDE for an array of ages using an optimized, fixed kernal bandwidth following Shimazaki and Shinomoto, 2010: Journal of Computational Neuroscience, v. 29, p. 171-182, doi:10.1007/s10827-009-0180-4.
@@ -3426,14 +3465,20 @@ def KDEcalcAgesGlobalAdapt(ages, x1=0, x2=4500, xdif=1, cumulative=False):
     import detritalpy.adaptiveKDE as akde
     #import adaptiveKDE as akde
 
-    KDE_age = np.arange(x1, x2+xdif, xdif)
+    KDE_age = np.arange(0, 4500+xdif, xdif) # Ensures that the KDE is calculated over all of geologic time
     KDE = np.zeros(shape=(len(ages),len(KDE_age)))
     for i in range(len(ages)):
         kde = akde.ssvkernel(np.asarray(ages[i]), tin=KDE_age, nbs=100)[0]
         if cumulative:
             kde = np.cumsum(kde)*xdif # Seems like this must be multiplied by xdif for it to work
         KDE[i,:] = kde
-    return KDE_age, KDE
+    KDE_age = KDE_age[int(x1/xdif):int((x2+xdif)/xdif)] # Only select the values within the specified plotting age range
+    KDEportionRange = np.arange(x1, x2+xdif, xdif)
+    KDEportionEmpty = np.empty(shape=(len(ages),len(KDEportionRange)))
+    KDEportion = np.zeros_like(KDEportionEmpty) # Copy the array, but with zeros
+    for i in range(len(ages)):
+        KDEportion[i] = KDE[i][int(x1/xdif):int((x2+xdif)/xdif)] # Only select the values within the specified plotting age range
+    return KDE_age, KDEportion
     
 def colorMe(i, palette='Default'):
     """
