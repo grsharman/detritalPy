@@ -102,12 +102,12 @@ def sshist(x, N=range(2, 501), SN=30):
     # compute cost function over each possible number of bins
     Cs = np.zeros((len(N), SN))
     for i, n in enumerate(N):  # loop over number of bins
-        shift = np.linspace(0, D[i], SN)
+        shift = np.linspace(0, D[i], np.int(SN))
         for p, sh in enumerate(shift):  # loop over shift window positions
 
             # define bin edges
             edges = np.linspace(x_min + sh - D[i]/2,
-                                x_max + sh - D[i]/2, N[i]+1)
+                                x_max + sh - D[i]/2, np.int(N[i]+1))
 
             # count number of events in these bins
             ki = np.histogram(x, edges)
@@ -125,7 +125,7 @@ def sshist(x, N=range(2, 501), SN=30):
     idx = np.argmin(C)
     optN = N[idx]
     optD = D[idx]
-    edges = np.linspace(x_min, x_max, optN)
+    edges = np.linspace(x_min, x_max, np.int(optN))
 
     return optN, optD, edges, C, N
 
@@ -188,7 +188,7 @@ def sskernel(x, tin=None, W=None, nbs=1000):
         T = np.max(x) - np.min(x)
         dx = np.sort(np.diff(np.sort(x)))
         dt_samp = dx[np.nonzero(dx)][0]
-        tin = np.linspace(np.min(x), np.max(x), min(np.ceil(T / dt_samp), 1e3))
+        tin = np.linspace(np.min(x), np.max(x), np.int(min(np.ceil(T / dt_samp), 1e3)))
         t = tin
         x_ab = x[(x >= min(tin)) & (x <= max(tin))]
     else:
@@ -197,7 +197,7 @@ def sskernel(x, tin=None, W=None, nbs=1000):
         dx = np.sort(np.diff(np.sort(x)))
         dt_samp = dx[np.nonzero(dx)][0]
         if dt_samp > min(np.diff(tin)):
-            t = np.linspace(min(tin), max(tin), min(np.ceil(T / dt_samp), 1e3))
+            t = np.linspace(min(tin), max(tin), np.int(min(np.ceil(T / dt_samp), 1e3)))
         else:
             t = tin
 
@@ -388,7 +388,7 @@ def ssvkernel(x, tin=None, M=80, nbs=100, WinFunc='Boxcar'):
         T = np.max(x) - np.min(x)
         dx = np.sort(np.diff(np.sort(x)))
         dt_samp = dx[np.nonzero(dx)][0]
-        tin = np.linspace(np.min(x), np.max(x), min(np.ceil(T / dt_samp), 1e3))
+        tin = np.linspace(np.min(x), np.max(x), np.int(min(np.ceil(T / dt_samp), 1e3)))
         t = tin
         x_ab = x[(x >= min(tin)) & (x <= max(tin))]
     else:
@@ -397,7 +397,7 @@ def ssvkernel(x, tin=None, M=80, nbs=100, WinFunc='Boxcar'):
         dx = np.sort(np.diff(np.sort(x)))
         dt_samp = dx[np.nonzero(dx)][0]
         if dt_samp > min(np.diff(tin)):
-            t = np.linspace(min(tin), max(tin), min(np.ceil(T / dt_samp), 1e3))
+            t = np.linspace(min(tin), max(tin), np.int(min(np.ceil(T / dt_samp), 1e3)))
         else:
             t = tin
 
@@ -411,7 +411,7 @@ def ssvkernel(x, tin=None, M=80, nbs=100, WinFunc='Boxcar'):
     N = sum(y_hist * dt).astype(np.float)
 
     # initialize window sizes
-    W = logexpSSV(np.linspace(ilogexpSSV(5 * dt), ilogexpSSV(T), M))
+    W = logexpSSV(np.linspace(ilogexpSSV(5 * dt), ilogexpSSV(T), np.int(M)))
 
     # compute local cost functions
     c = np.zeros((M, L))
