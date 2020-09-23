@@ -3444,8 +3444,8 @@ def KDEcalcAgesLocalAdapt(ages, x1=0, x2=4500, xdif=1, cumulative=False):
     Notes
     -----
     """
-    #import detritalpy.adaptiveKDE as akde
-    import adaptiveKDE as akde
+    import detritalpy.adaptiveKDE as akde
+    #import adaptiveKDE as akde
 
     KDE_age = np.arange(0, 4500+xdif, xdif) # Ensures that the KDE is calculated over all of geologic time
     KDE = np.zeros(shape=(len(ages),len(KDE_age)))
@@ -3483,8 +3483,8 @@ def KDEcalcAgesGlobalAdapt(ages, x1=0, x2=4500, xdif=1, cumulative=False):
     Notes
     -----
     """
-    #import detritalpy.adaptiveKDE as akde
-    import adaptiveKDE as akde
+    import detritalpy.adaptiveKDE as akde
+    #import adaptiveKDE as akde
 
     KDE_age = np.arange(0, 4500+xdif, xdif) # Ensures that the KDE is calculated over all of geologic time
     KDE = np.zeros(shape=(len(ages),len(KDE_age)))
