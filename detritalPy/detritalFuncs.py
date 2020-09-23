@@ -24,14 +24,14 @@ matplotlib.rcParams['ps.fonttype'] = 42
 # Functions for loading a dataset and selecting samples 
 ###############################################################
 
-def loadData(samples, analyses, ID_col = 'Sample_ID'):
+def loadData(samples_df, analyses_df, ID_col = 'Sample_ID'):
     """
     Creates a Pandas DataFrame from DataFrames of samples and analyses
     
     Parameters
     ----------
-    samples : A Pandas DataFrame that contains sample information. Must be indexed by the Sample_ID
-    analyses : A Pandas DataFrame that contains analysis information. Must be indexed by the Sample_ID
+    samples : A Pandas DataFrame that contains sample information.
+    analyses : A Pandas DataFrame that contains analysis information.
     ID_col : (optional) The name of the column that contains unique sample identifiers. Default is 'Sample_ID'
     
     Returns
@@ -44,21 +44,41 @@ def loadData(samples, analyses, ID_col = 'Sample_ID'):
 
     """
     main_byid_df = None
-    main_byid_df = samples.copy()
-    for sample_ind in range(main_byid_df.shape[0]):
-        active_sample_id = main_byid_df.iloc[sample_ind][ID_col]
-        if active_sample_id in analyses.index: # Allows samples to exist without analyses data
-            active_UPb_data = analyses.loc[active_sample_id]
-            if len(active_UPb_data.shape) == 1: # Eliminates an error that occurs when a sample only has 1 analysis
-                active_UPb_data = pd.DataFrame(active_UPb_data).T            
+    analyses_df.set_index('Sample_ID',inplace=True,drop=False)
+    samples_df.set_index('Sample_ID',inplace=True,drop=False)
+    main_byid_df = samples_df.copy() # Samples table is the starting point
+
+    for sample in main_byid_df[ID_col]: # loop through entries in main_df
+        if sample in analyses_df[ID_col]: # Allows samples to exist without analyses data
+            active_UPb_data = analyses_df.loc[analyses_df[ID_col].isin([sample]),:]
             for colname in active_UPb_data:
+                if colname not in [ID_col]: # Skip if the indexing column
+                    # Check column naming overlap with the Samples table (having the same column name will otherwise result in an error)
+                    if colname in samples_df.columns:
+                        colname_adj = colname+'_data' # New name for colname
+                        if colname_adj not in main_byid_df.columns: # Make colname with revised name if already in samples table
+                            main_byid_df[colname_adj] = (np.nan*np.empty(shape=(len(main_byid_df),1))).tolist()
+                            main_byid_df[colname_adj] = np.asarray(main_byid_df[colname_adj])                
+                        main_byid_df.at[sample,colname_adj] = active_UPb_data[colname].values
+                    else:
+                        if colname not in main_byid_df.columns: # Make colname with revised name if already in samples table
+                            main_byid_df[colname] = (np.nan*np.empty(shape=(len(main_byid_df),1))).tolist()
+                            main_byid_df[colname] = np.asarray(main_byid_df[colname])
+                        main_byid_df.at[sample,colname] = active_UPb_data[colname].values
+        else:
+            for colname in analyses_df.columns:
                 if colname not in [ID_col]:
-                # Make colname if not already in dataframe
-                    if colname not in main_byid_df.columns:
-                        main_byid_df[colname] = (np.nan*np.empty(shape=(len(main_byid_df),1))).tolist()
-                        #main_byid_df[colname] = main_byid_df[colname].astype(np.ndarray)
-                        main_byid_df[colname] = np.asarray(main_byid_df[colname])                       
-                    main_byid_df.at[active_sample_id,colname] = active_UPb_data[colname].values
+                    if colname in samples_df.columns:
+                        colname_adj = colname+'_data' # New name for colname
+                        if colname_adj not in main_byid_df.columns: # Make colname with revised name if already in samples table
+                            main_byid_df[colname_adj] = (np.nan*np.empty(shape=(len(main_byid_df),1))).tolist()
+                            main_byid_df[colname_adj] = np.asarray(main_byid_df[colname_adj])                
+                        main_byid_df.at[sample,colname_adj] = []
+                    else:
+                        if colname not in main_byid_df.columns: # Make colname with revised name if already in samples table
+                            main_byid_df[colname] = (np.nan*np.empty(shape=(len(main_byid_df),1))).tolist()
+                            main_byid_df[colname] = np.asarray(main_byid_df[colname])
+                        main_byid_df.at[sample,colname] = []       
     return main_byid_df
 
 def loadDataExcel(dataToPlot, mainSheet = 'Samples', dataSheet = 'ZrUPb', ID_col = 'Sample_ID'):
@@ -236,6 +256,7 @@ def sampleToData(sampleList, main_byid_df, sampleLabel='Sample_ID', bestAge='Bes
             samples_no_data = np.asarray(sampleList)[[len(x)==0 for x in ages]] # Return a list of the samples with no data
             print('Warning! These samples have no data: ',samples_no_data)
             print('Please check for consistency in sample naming')
+            print('and/or verify that all data have not been filtered')
 
     return ages, errors, numGrains, labels
 
@@ -3423,8 +3444,8 @@ def KDEcalcAgesLocalAdapt(ages, x1=0, x2=4500, xdif=1, cumulative=False):
     Notes
     -----
     """
-    import detritalpy.adaptiveKDE as akde
-    #import adaptiveKDE as akde
+    #import detritalpy.adaptiveKDE as akde
+    import adaptiveKDE as akde
 
     KDE_age = np.arange(0, 4500+xdif, xdif) # Ensures that the KDE is calculated over all of geologic time
     KDE = np.zeros(shape=(len(ages),len(KDE_age)))
@@ -3462,8 +3483,8 @@ def KDEcalcAgesGlobalAdapt(ages, x1=0, x2=4500, xdif=1, cumulative=False):
     Notes
     -----
     """
-    import detritalpy.adaptiveKDE as akde
-    #import adaptiveKDE as akde
+    #import detritalpy.adaptiveKDE as akde
+    import adaptiveKDE as akde
 
     KDE_age = np.arange(0, 4500+xdif, xdif) # Ensures that the KDE is calculated over all of geologic time
     KDE = np.zeros(shape=(len(ages),len(KDE_age)))
