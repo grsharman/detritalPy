@@ -366,6 +366,17 @@ def plotAll(sampleList, ages, errors, numGrains, labels, whatToPlot='both', sepa
     if isinstance(x1, list) != isinstance(w, list):
         print('Error: x1 and w type mismatch (list vs number)')
         return None
+   
+    if agebinsc != None: # Only define agebins_alpha if agebinsc is specified
+        if agebinsc_alpha == None: # Set default alpha of 1 if not specified
+            agebinsc_alpha = np.ones(len(agebinsc))
+        else:
+            if not isinstance(agebinsc_alpha, list):
+                agebinsc_alpha = np.ones(len(agebinsc))*agebinsc_alpha
+            else: # If agebins_alpha is specified as a list, make sure there are enough values
+                if len(agebinsc_alpha) < len(agebinsc):
+                    print('Warning: Not enough alpha values in agebinsc_alpha')
+                    return None
 
     if separateSubplots:
         fig = plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, plotCPDP, plotCKDE, plotDKW, normPlots, plotKDE, 
@@ -418,17 +429,6 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
             'weight' : 'normal',
             'size'   : 14}
     plt.rc('font', **font)
-    
-    # Set default alpha of 1 if not specified
-    if agebinsc_alpha == None and agebinsc != None:
-        agebinsc_alpha = np.ones(len(agebinsc))
-    else:
-        if not isinstance(agebinsc_alpha, list):
-            agebinsc_alpha = np.ones(len(agebinsc))*agebinsc_alpha
-        else:
-            if len(agebinsc_alpha) < len(agebinsc):
-                print('Warning: Not enough alpha values in agebinsc_alpha')
-                return None
 
     # Sets the matplotlib figure and axes structure
     if whatToPlot == 'cumulative':
@@ -705,7 +705,7 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                                     if (peakAges[i][j]>x1[h] and peakAges[i][j]<x2[h]): # Only plot the peak age if within plotting range
                                         axKDE.text(x=KDE_age[indexes[i][j]],y=KDE[i][indexes[i][j]]*dx_pct[h], s=np.round(peakAges[i][j],num_after_point(xdif)), size='x-small')                                
                         pathlib.Path('Output').mkdir(parents=True, exist_ok=True)
-                        exportPeakAge(labels, np.round(peakAges,num_after_point(xdif)), peakAgesGrains, fileName = str('Output/' + 'peakAges.csv'))
+                        exportPeakAge(labels, peakAges, peakAgesGrains, fileName = str('Output/' + 'peakAges.csv'))
                     # Fill the KDE      
                     if colorKDE:
                         axKDE.fill_between(KDE_age, 0, KDE[i]*dx_pct[h], alpha = 1, color=colorMe(i), lw=0)
@@ -780,7 +780,7 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                                     if (peakAges[i][j]>x1[h] and peakAges[i][j]<x2[h]): # Only plot the peak age if within plotting range
                                         axPDP.text(x=PDP_age[indexes[i][j]],y=PDP[i][indexes[i][j]]*dx_pct[h], s=np.round(peakAges[i][j],num_after_point(xdif)), size='x-small')                           
                         pathlib.Path('Output').mkdir(parents=True, exist_ok=True)
-                        exportPeakAge(labels, np.round(peakAges,num_after_point(xdif)), peakAgesGrains, fileName = str('Output/' + 'peakAges.csv'))
+                        exportPeakAge(labels, peakAges, peakAgesGrains, fileName = str('Output/' + 'peakAges.csv'))
                     if colorPDP:
                         axPDP.fill_between(PDP_age, PDP[i]*dx_pct[h], alpha = 1, color=colorMe(i))
                     if colorPDPbyAge:
@@ -905,18 +905,7 @@ def plotAll_2(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
         print('Error: Split axis is not compatible with separateSubplots=False!')
         return None
 
-    # Set default alpha of 1 if not specified
-    if agebinsc_alpha == None and agebinsc != None:
-        agebinsc_alpha = np.ones(len(agebinsc))
-    else:
-        if not isinstance(agebinsc_alpha, list):
-            agebinsc_alpha = np.ones(len(agebinsc))*agebinsc_alpha
-        else:
-            if len(agebinsc_alpha) < len(agebinsc):
-                print('Warning: Not enough alpha values in agebinsc_alpha')
-                return None
-
-    # Reverse sample order, to make plotting order consistent with plotAll_1()
+     # Reverse sample order, to make plotting order consistent with plotAll_1()
     sampleList = sampleList[::-1]
     ages = ages[::-1]
     errors = errors[::-1]
