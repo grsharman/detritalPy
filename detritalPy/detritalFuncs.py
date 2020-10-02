@@ -305,7 +305,7 @@ def plotAll(sampleList, ages, errors, numGrains, labels, whatToPlot='both', sepa
     normPlots=False, plotKDE=False, colorKDE=False, colorKDEbyAge=False, plotPDP=True, colorPDP=True, colorPDPbyAge=False, plotColorBar=False, plotHist=False,
     plotLog=False, plotPIE=False, x1=0, x2=4000, b=25, bw=10, xdif=1, agebins=None, agebinsc=None, w=10, c=4, h=5, plotAgePeaks=False, agePeakOptions=None,
     CDFlw=3, KDElw=1, PDPlw=1, plotDepoAge = False, depoAge = [0], plotAgesOnCDF = False, plotHeatMap = False, heatMapType = None, heatMap = 'inferno_r',
-    PDP_ymax = 'Default', KDE_ymax = 'Default'):
+    PDP_ymax = 'Default', KDE_ymax = 'Default', agebinsc_alpha=None):
     """
     Creates a plot of detrital age distributions using a variety of the most common data visualization approaches. The plotting function is divided into a cumulative distribution plot and a relative distribution plot. When both are plotted together, the cumulative distribution is shown on top and the relative distribution for each sample or group of samples is shown below.
 
@@ -363,39 +363,40 @@ def plotAll(sampleList, ages, errors, numGrains, labels, whatToPlot='both', sepa
     -----
     """
 
-    if type(x1) != type (w):
-        print('Error: x1 and w are not the same length')
+    if isinstance(x1, list) != isinstance(w, list):
+        print('Error: x1 and w type mismatch (list vs number)')
         return None
 
     if separateSubplots:
         fig = plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, plotCPDP, plotCKDE, plotDKW, normPlots, plotKDE, 
             colorKDE, colorKDEbyAge, plotPDP, colorPDP, colorPDPbyAge, plotColorBar, plotHist, plotLog, plotPIE, x1, x2, b, bw, xdif, agebins, 
             agebinsc, w, c, plotAgePeaks, agePeakOptions, CDFlw, KDElw, PDPlw, plotDepoAge, depoAge, plotAgesOnCDF, plotHeatMap, heatMapType, heatMap,
-            PDP_ymax, KDE_ymax)
+            PDP_ymax, KDE_ymax, agebinsc_alpha)
     else:
         fig = plotAll_2(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, plotCPDP, plotCKDE, plotDKW, normPlots, plotKDE, 
             colorKDE, colorKDEbyAge, plotPDP, colorPDP, colorPDPbyAge, plotColorBar, plotHist, plotLog, plotPIE, x1, x2, b, bw, xdif, agebins, 
-            agebinsc, w, c, h, CDFlw, KDElw, PDPlw, plotAgesOnCDF)
+            agebinsc, w, c, h, CDFlw, KDElw, PDPlw, plotAgesOnCDF, agebinsc_alpha)
     return fig
 
 def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, plotCPDP, plotCKDE, plotDKW, normPlots, plotKDE, colorKDE, 
     colorKDEbyAge, plotPDP, colorPDP, colorPDPbyAge, plotColorBar, plotHist, plotLog, plotPIE, x1, x2, b, bw, xdif, agebins, agebinsc, w, c, 
-    plotAgePeaks, agePeakOptions, CDFlw, KDElw, PDPlw, plotDepoAge, depoAge, plotAgesOnCDF, plotHeatMap, heatMapType, heatMap, PDP_ymax, KDE_ymax):
+    plotAgePeaks, agePeakOptions, CDFlw, KDElw, PDPlw, plotDepoAge, depoAge, plotAgesOnCDF, plotHeatMap, heatMapType, heatMap, PDP_ymax, KDE_ymax,
+    agebinsc_alpha):
 
-    if type(x1) == int: # Log plot not available with split axis plot
-        if (plotLog and x1 == 0):
-            x1 = 0.1 # Ensures that 0 will not be plotted on a log scale
-        dx_pct = [1]
-    else: # Calculate the y-axis adjustment for split axis plots
+    if isinstance(x1, list): # Log plot not available with split axis plot
         dx_myr = np.asarray(x2)-np.asarray(x1) # Myr in each portion of x-axis
         dx_l = np.asarray(w[1:])/np.sum(w[1:]) # Proportion of plot represented by each x-axis segment
         dx_myr_l = dx_myr/dx_l # Units of Myr/length for each part of the plot
         dx_pct = dx_myr_l/np.sum(dx_myr_l) # Normalized myr/length as a percentage that sum to 1
+    else:
+        if (plotLog and x1 == 0):
+            x1 = 0.1 # Ensures that 0 will not be plotted on a log scale
+        dx_pct = [1]
 
     # Calculate the number of grains per sample or sample group plotted
     numGrainsPlotted = np.zeros_like(numGrains)
     for i in range(len(sampleList)):
-        if type(x1) == int:
+        if isinstance(x1, list) == False:
             numGrainsPlotted[i] = len([elem for elem in ages[i] if (elem < x2 and elem > x1)]) # Number of grains in plot
         else:
             numGrainsPlotted[i] = len([elem for elem in ages[i] if (elem < x2[-1] and elem > x1[0])]) # Number of grains in plot (note that this assumes no gaps in what you are plotting!!!)
@@ -418,9 +419,20 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
             'size'   : 14}
     plt.rc('font', **font)
     
+    # Set default alpha of 1 if not specified
+    if agebinsc_alpha == None and agebinsc != None:
+        agebinsc_alpha = np.ones(len(agebinsc))
+    else:
+        if not isinstance(agebinsc_alpha, list):
+            agebinsc_alpha = np.ones(len(agebinsc))*agebinsc_alpha
+        else:
+            if len(agebinsc_alpha) < len(agebinsc):
+                print('Warning: Not enough alpha values in agebinsc_alpha')
+                return None
+
     # Sets the matplotlib figure and axes structure
     if whatToPlot == 'cumulative':
-        if type(x1) == int: # If split axis is not used
+        if isinstance(x1, list) == False: # If split axis is not used
             fig, axs = plt.subplots(c,w, figsize=(w,c))
             axs[0,0] = plt.subplot2grid((c,w),(0,0),rowspan=c) # empty subplot
             axs[0,0].axis('off') # delete axis from empty subplot
@@ -442,7 +454,7 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
         if (n == 1 and whatToPlot == 'relative'):
             c = c+1 # To avoid an index error when only one sample or sample group is plotted
         
-        if type(x1) == int: # If split axis is not used
+        if isinstance(x1, list) == False: # If split axis is not used
             fig, axs = plt.subplots(n+c,w, figsize=(w,n+c))
             if c > 0:
                 axs[0,0] = plt.subplot2grid((n+c,w),(0,0),rowspan=c) # empty subplot
@@ -514,7 +526,7 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
     fig.subplots_adjust(hspace=0)
 
     # Figure out how many split axes to use
-    if type(x1) == int:
+    if isinstance(x1, list) == False:
         loops = 1
     else:
         loops = len(w)-1
@@ -541,13 +553,13 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
         if plotHeatMap and heatMapType == 'hist':
             dist = []
             for i in range(len(sampleList)):
-                if type(x1) == int:
+                if isinstance(x1, list) == False:
                     dist.append(np.histogram(ages[i], bins = np.arange(x1, x2+xdif, xdif), range=(x1, x2))[0])
                 else:
                     dist.append(np.histogram(ages[i], bins = np.arange(x1[h], x2[h]+xdif, xdif), range=(x1[h], x2[h]))[0])
 
         # Determine the maximum scale to use, if plotting a split axis
-        if type(x1) == int:
+        if isinstance(x1, list) == False:
             1+1#KDEmax = np.zeros((len(sampleList)))
         else:
             if plotKDE:
@@ -623,7 +635,7 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                 axs[0,h+1].set_ylabel("Cumulative Distribution")
             if h == loops-1: # Only plot legend for rightmost plot
                 axs[0,h+1].legend(loc="lower right", prop={'size':8})
-            if type(x1) == int:
+            if isinstance(x1, list) == False:
                 axs[0,h+1].set_xlim(x1, x2)
             else:
                 axs[0,h+1].set_xlim(x1[h], x2[h])
@@ -636,10 +648,10 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
             if plotColorBar:
                 if len(np.shape(agebins)) == 1:
                     for j in range(nage):
-                        axs[0,h+1].axvspan(xmin=agebins[j],xmax=agebins[j+1], color = agebinsc[j])
+                        axs[0,h+1].axvspan(xmin=agebins[j],xmax=agebins[j+1], color = agebinsc[j], alpha = agebinsc_alpha[j])
                 if len(np.shape(agebins)) == 2:
                     for j in range(len(agebins)):
-                        axs[0,h+1].axvspan(xmin=agebins[j][0],xmax=agebins[j][1], color = agebinsc[j])
+                        axs[0,h+1].axvspan(xmin=agebins[j][0],xmax=agebins[j][1], color = agebinsc[j], alpha = agebinsc_alpha[j])
 
             # Plot depositional age as a vertical line, if selected
             if plotDepoAge:
@@ -656,7 +668,7 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                 # Plot the KDE as a heat map
                 if plotHeatMap:
                     axHeat = axs[c+i,h+1].twinx()
-                    if type(x1) == int:
+                    if isinstance(x1, list) == False:
                         axHeat.set_xlim([x1, x2])
                     else:
                         axHeat.set_xlim([x1[h], x2[h]])
@@ -666,7 +678,7 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                     if heatMapType == 'PDP':
                         axHeat.imshow([PDP[i]], aspect='auto', cmap=heatMap, interpolation='none', extent=[0-xdif*0.5, 4500-xdif*.5, 0, 1])
                     if heatMapType == 'hist':
-                        if type(x1) == int:
+                        if isinstance(x1, list) == False:
                             axHeat.imshow([dist[i]], aspect='auto', cmap=heatMap, interpolation='none', extent=[x1-xdif*0.5, x2-xdif*0.5, 0, 1])
                         else:
                             axHeat.imshow([dist[i]], aspect='auto', cmap=heatMap, interpolation='none', extent=[x1[h]-xdif*0.5, x2[h]-xdif*0.5, 0, 1])
@@ -686,14 +698,14 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                         axKDE.plot(KDE_age[indexes[i]],KDE[i][indexes[i]]*dx_pct[h], '|', color='black')
                         if agePeakOptions[4]:
                             for j in range(len(peakAges[i])):
-                                if type(x1) == int:
+                                if isinstance(x1, list) == False:
                                     if (peakAges[i][j]>x1 and peakAges[i][j]<x2): # Only plot the peak age if within plotting range
-                                        axKDE.text(x=KDE_age[indexes[i][j]],y=KDE[i][indexes[i][j]], s=peakAges[i][j], size='x-small')
+                                        axKDE.text(x=KDE_age[indexes[i][j]],y=KDE[i][indexes[i][j]], s=np.round(peakAges[i][j],num_after_point(xdif)), size='x-small')
                                 else:
                                     if (peakAges[i][j]>x1[h] and peakAges[i][j]<x2[h]): # Only plot the peak age if within plotting range
-                                        axKDE.text(x=KDE_age[indexes[i][j]],y=KDE[i][indexes[i][j]]*dx_pct[h], s=peakAges[i][j], size='x-small')                                
+                                        axKDE.text(x=KDE_age[indexes[i][j]],y=KDE[i][indexes[i][j]]*dx_pct[h], s=np.round(peakAges[i][j],num_after_point(xdif)), size='x-small')                                
                         pathlib.Path('Output').mkdir(parents=True, exist_ok=True)
-                        exportPeakAge(labels, peakAges, peakAgesGrains, fileName = str('Output/' + 'peakAges.csv'))
+                        exportPeakAge(labels, np.round(peakAges,num_after_point(xdif)), peakAgesGrains, fileName = str('Output/' + 'peakAges.csv'))
                     # Fill the KDE      
                     if colorKDE:
                         axKDE.fill_between(KDE_age, 0, KDE[i]*dx_pct[h], alpha = 1, color=colorMe(i), lw=0)
@@ -705,15 +717,15 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                                 xage2 = agebins[k+1]
                                 KDE_agePart = np.arange(xage1, xage2+xdif, xdif)        
                                 KDEpart = KDE[i][int(xage1/xdif):int((xage2+xdif)/xdif)]
-                                axKDE.fill_between(KDE_agePart, 0, KDEpart*dx_pct[h], alpha = 1, color=agebinsc[k], lw=0)
+                                axKDE.fill_between(KDE_agePart, 0, KDEpart*dx_pct[h], color=agebinsc[k], lw=0, alpha = agebinsc_alpha[k])
                         if len(np.shape(agebins)) ==  2:
                             for k in range(len(agebins)):
                                 xage1 = agebins[k][0]
                                 xage2 = agebins[k][1]
                                 KDE_agePart = np.arange(xage1, xage2+xdif, xdif)
                                 KDEpart = KDE[i][int(xage1/xdif):int((xage2+xdif)/xdif)]
-                                axKDE.fill_between(KDE_agePart, 0, KDEpart*dx_pct[h], alpha = 1, color=agebinsc[k], lw=0)
-                    if type(x1) == int:
+                                axKDE.fill_between(KDE_agePart, 0, KDEpart*dx_pct[h], color=agebinsc[k], lw=0, alpha = agebinsc_alpha[k])
+                    if isinstance(x1, list) == False:
                         axKDE.set_xlim(x1, x2)
                     else:
                         axKDE.set_xlim(x1[h], x2[h])
@@ -759,16 +771,16 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                     if (plotAgePeaks and agePeakOptions[0] == 'PDP'):
                         axPDP.plot(PDP_age[indexes[i]],PDP[i][indexes[i]]*dx_pct[h], '|', color='black')
                         if agePeakOptions[4]:
-                            if type(x1) == int:
+                            if isinstance(x1, list) == False:
                                 for j in range(len(peakAges[i])):
                                     if (peakAges[i][j]>x1 and peakAges[i][j]<x2): # Only plot the peak age if within plotting range
-                                        axPDP.text(x=PDP_age[indexes[i][j]],y=PDP[i][indexes[i][j]], s=peakAges[i][j], size='x-small')
+                                        axPDP.text(x=PDP_age[indexes[i][j]],y=PDP[i][indexes[i][j]], s=np.round(peakAges[i][j],num_after_point(xdif)), size='x-small')
                             else:
                                 for j in range(len(peakAges[i])):
                                     if (peakAges[i][j]>x1[h] and peakAges[i][j]<x2[h]): # Only plot the peak age if within plotting range
-                                        axPDP.text(x=PDP_age[indexes[i][j]],y=PDP[i][indexes[i][j]]*dx_pct[h], s=peakAges[i][j], size='x-small')                           
+                                        axPDP.text(x=PDP_age[indexes[i][j]],y=PDP[i][indexes[i][j]]*dx_pct[h], s=np.round(peakAges[i][j],num_after_point(xdif)), size='x-small')                           
                         pathlib.Path('Output').mkdir(parents=True, exist_ok=True)
-                        exportPeakAge(labels, peakAges, peakAgesGrains, fileName = str('Output/' + 'peakAges.csv'))
+                        exportPeakAge(labels, np.round(peakAges,num_after_point(xdif)), peakAgesGrains, fileName = str('Output/' + 'peakAges.csv'))
                     if colorPDP:
                         axPDP.fill_between(PDP_age, PDP[i]*dx_pct[h], alpha = 1, color=colorMe(i))
                     if colorPDPbyAge:
@@ -777,7 +789,7 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                             for j in range(nage):                
                                 xage1 = agebins[j]
                                 xage2 = agebins[j+1]
-                                if type(x1) == int:
+                                if isinstance(x1, list) == False:
                                     if (xage2 > x2 and xage1 <= x2): # Avoids a problem that would otherwise occur if any age bins are greater than x2
                                         xage2 = x2
                                     if (xage2 > x2 and xage1 >= x2):
@@ -789,7 +801,7 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                                         break                                    
                                 PDP_agePart = np.arange(xage1, xage2+xdif, xdif)
                                 PDPpart = PDP[i][int(xage1/xdif):int((xage2+xdif)/xdif)]
-                                axPDP.fill_between(PDP_agePart, 0, PDPpart*dx_pct[h], alpha = 1, color=agebinsc[j])
+                                axPDP.fill_between(PDP_agePart, 0, PDPpart*dx_pct[h], color=agebinsc[j], alpha = agebinsc_alpha[j])
                         if len(np.shape(agebins)) == 2:
                             for j in range(len(agebins)):
                                 xage1 = agebins[j][0]
@@ -800,8 +812,8 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                                     break
                                 PDP_agePart = np.arange(xage1, xage2+xdif, xdif)
                                 PDPpart = PDP[i][int(xage1/xdif):int((xage2+xdif)/xdif)]
-                                axPDP.fill_between(PDP_agePart, 0, PDPpart*dx_pct[h], alpha = 1, color=agebinsc[j])
-                    if type(x1) == int:
+                                axPDP.fill_between(PDP_agePart, 0, PDPpart*dx_pct[h], color=agebinsc[j], alpha = agebinsc_alpha[j])
+                    if isinstance(x1, list) == False:
                         axPDP.set_xlim([x1, x2])
                     else:
                         axPDP.set_xlim([x1[h], x2[h]])
@@ -821,7 +833,7 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                         if PDP_ymax != 'Default':
                             axPDP.set_ylim([0,PDP_ymax])
                         else:
-                            if type(x1) == int:
+                            if isinstance(x1, list) == False:
                                 axPDP.set_ylim([0, max(PDP[i])+max(PDP[i])*0.05])
                             else:
                                 axPDP.set_ylim([0, PDPmax[i]+PDPmax[i]*0.05])
@@ -838,7 +850,7 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                             axs[c+i,h+1].axvline(x=depoAge, color='darkred')
                         else:
                             axs[c+i,h+1].axvline(x=depoAge[i], color=colorMe(i))
-                    if type(x1) == int:
+                    if isinstance(x1, list) == False:
                         bin_array = np.arange(x1, x2+xdif, b)
                         axHist.hist(ages[i], bins=bin_array, color='black', fill=None, alpha=1, histtype='bar', density=False)
                         axHist.set_xlim([x1, x2]) # Use this code to set the x-axis scale
@@ -867,16 +879,18 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                         hist = []
                         for j in range(len(agebins)):
                             hist.append(np.histogram(ages[i],agebins[j])[0][0])
-                    axs[c+i,0].pie(hist, colors=agebinsc, startangle=90, counterclock=False, radius=0.75)
+                    pie = axs[c+i,0].pie(hist, colors=agebinsc, startangle=90, counterclock=False, radius=0.75)
+                    for j in range(len(pie[0])):
+                        pie[0][j].set_alpha(agebinsc_alpha[j])
                 
                 # Plot colored vertical bars, if selected
                 if plotColorBar:
                     if len(np.shape(agebins)) == 1:
                         for j in range(nage):
-                            axs[c+i,h+1].axvspan(xmin=agebins[j],xmax=agebins[j+1], color = agebinsc[j])
+                            axs[c+i,h+1].axvspan(xmin=agebins[j],xmax=agebins[j+1], color = agebinsc[j], alpha = agebinsc_alpha[j])
                     if len(np.shape(agebins)) == 2:
                         for j in range(len(agebins)):
-                            axs[c+i,h+1].axvspan(xmin=agebins[j][0],xmax=agebins[j][1], color = agebinsc[j])
+                            axs[c+i,h+1].axvspan(xmin=agebins[j][0],xmax=agebins[j][1], color = agebinsc[j], alpha = agebinsc_alpha[j])
 
     if type(x1) != int:
         fig.suptitle('Age (Ma)', x=0.5, y=0.07) # Add label to bottom of figure (it's positioning needs some work . . . )
@@ -885,11 +899,22 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
 
 def plotAll_2(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, plotCPDP, plotCKDE, plotDKW, normPlots, plotKDE, 
             colorKDE, colorKDEbyAge, plotPDP, colorPDP, colorPDPbyAge, plotColorBar, plotHist, plotLog, plotPIE, x1, x2, b, bw, xdif, agebins, 
-            agebinsc, w, c, h, CDFlw, KDElw, PDPlw, plotAgesOnCDF):
+            agebinsc, w, c, h, CDFlw, KDElw, PDPlw, plotAgesOnCDF, agebinsc_alpha):
 
-    if type(x1) != int:
+    if isinstance(x1, list):
         print('Error: Split axis is not compatible with separateSubplots=False!')
         return None
+
+    # Set default alpha of 1 if not specified
+    if agebinsc_alpha == None and agebinsc != None:
+        agebinsc_alpha = np.ones(len(agebinsc))
+    else:
+        if not isinstance(agebinsc_alpha, list):
+            agebinsc_alpha = np.ones(len(agebinsc))*agebinsc_alpha
+        else:
+            if len(agebinsc_alpha) < len(agebinsc):
+                print('Warning: Not enough alpha values in agebinsc_alpha')
+                return None
 
     # Reverse sample order, to make plotting order consistent with plotAll_1()
     sampleList = sampleList[::-1]
@@ -904,7 +929,7 @@ def plotAll_2(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
     # Calculate the number of grains per sample or sample group plotted
     numGrainsPlotted = np.zeros_like(numGrains)
     for i in range(len(sampleList)):
-        numGrainsPlotted[i] = len([elem for elem in ages[i] if (elem < x2 and elem > x1)]) # Number of grains in plot
+        numGrainsPlotted[i] = len([elem for elem in ages[i] if (elem < int(x2) and elem > int(x1))]) # Number of grains in plot
     
     # Number of samples per plotted distribution
     N = np.zeros_like(numGrains)
@@ -913,7 +938,8 @@ def plotAll_2(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
     else:
         for i in range(len(sampleList)):
             N[i] = len(sampleList[i][0])
-    nage = len(agebins)-1
+    if agebins is not None:
+        nage = len(agebins)-1
     n = len(sampleList)
     if h == 'auto':
         h = n
@@ -1024,10 +1050,10 @@ def plotAll_2(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
         if plotColorBar:
             if len(np.shape(agebins)) == 1:
                 for j in range(nage):
-                    axs[0,0].axvspan(xmin=agebins[j],xmax=agebins[j+1], color = agebinsc[j])
+                    axs[0,0].axvspan(xmin=agebins[j],xmax=agebins[j+1], color = agebinsc[j], alpha = agebinsc_alpha[j])
             if len(np.shape(agebins)) == 2:
                 for j in range(len(agebins)):
-                    axs[0,0].axvspan(xmin=agebins[j][0],xmax=agebins[j][1], color = agebinsc[j])
+                    axs[0,0].axvspan(xmin=agebins[j][0],xmax=agebins[j][1], color = agebinsc[j], alpha = agebinsc_alpha[j])
 
     # Plot the relative distribution (PDP and/or KDE)
     if (whatToPlot == 'both' or whatToPlot == 'relative'):
@@ -1079,14 +1105,14 @@ def plotAll_2(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                             xage2 = agebins[k+1]
                             KDE_agePart = np.arange(xage1, xage2+xdif, xdif)        
                             KDEshiftPart = KDEshift[i][int(xage1/xdif):int((xage2+xdif)/xdif)]
-                            axs[c,0].fill_between(KDE_agePart, np.min(KDEshift[i]), KDEshiftPart, alpha = 1, color=agebinsc[k], lw=0)
+                            axs[c,0].fill_between(KDE_agePart, np.min(KDEshift[i]), KDEshiftPart, color=agebinsc[k], lw=0, alpha = agebinsc_alpha[k])
                     if len(np.shape(agebins)) ==  2:
                         for k in range(len(agebins)):
                             xage1 = agebins[k][0]
                             xage2 = agebins[k][1]
                             KDE_agePart = np.arange(xage1, xage2+xdif, xdif)
                             KDEshiftPart = KDEshift[i][int(xage1/xdif):int((xage2+xdif)/xdif)]
-                            axs[c,0].fill_between(KDE_agePart, np.min(KDEshift[i]), KDEshiftPart, alpha = 1, color=agebinsc[k], lw=0)
+                            axs[c,0].fill_between(KDE_agePart, np.min(KDEshift[i]), KDEshiftPart, color=agebinsc[k], lw=0, alpha = agebinsc_alpha[k])
             if plotPDP:
                 # Shift PDP y-values
                 PDPshift = PDP.copy()
@@ -1101,14 +1127,14 @@ def plotAll_2(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                             xage2 = agebins[k+1]
                             PDP_agePart = np.arange(xage1, xage2+xdif, xdif)        
                             PDPshiftPart = PDPshift[i][int(xage1/xdif):int((xage2+xdif)/xdif)]
-                            axs[c,0].fill_between(PDP_agePart, np.min(PDPshift[i]), PDPshiftPart, alpha = 1, color=agebinsc[k], lw=0)
+                            axs[c,0].fill_between(PDP_agePart, np.min(PDPshift[i]), PDPshiftPart, color=agebinsc[k], lw=0, alpha = agebinsc_alpha[k])
                     if len(np.shape(agebins)) == 2:
                         for k in range(len(agebins)):
                             xage1 = agebins[k][0]
                             xage2 = agebins[k][1]
                             PDP_agePart = np.arange(xage1, xage2+xdif, xdif)        
                             PDPshiftPart = PDPshift[i][int(xage1/xdif):int((xage2+xdif)/xdif)]
-                            axs[c,0].fill_between(PDP_agePart, np.min(PDPshift[i]), PDPshiftPart, alpha = 1, color=agebinsc[k], lw=0)                          
+                            axs[c,0].fill_between(PDP_agePart, np.min(PDPshift[i]), PDPshiftPart, color=agebinsc[k], lw=0, alpha = agebinsc_alpha[k])                          
             axs[c,0].text(x2+(x2-x1)*0.01, distMaxCumSum[i], s=labels[i], size='x-small')
         
         # Plot colored vertical bars, if selected
@@ -3250,6 +3276,15 @@ def weightedMeanCSV(ages, errors, numGrains, labels, fileName='weightedMean.csv'
 ###############################################################
 # Helper functions 
 ###############################################################            
+
+def num_after_point(x):
+    """
+    Computes the number of decimal places for a number
+    """
+    s = str(x)
+    if not '.' in s:
+        return 0
+    return len(s) - s.index('.') - 1
 
 def calcDFW(CDF, epsilon):
     """
