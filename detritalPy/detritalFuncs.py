@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import pathlib
 import pandas as pd
 
-# Allows font to be preserved when opening in Adobe Illustrator
+# Allows font to be preserved opening in Adobe Illustrator
 import matplotlib 
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
@@ -99,7 +99,7 @@ def loadDataExcel(dataToPlot, mainSheet = 'Samples', dataSheet = 'ZrUPb', ID_col
     
     Notes
     -----
-    Portions of this script were provided by Kevin Befus (University of Wyoming)
+    Portions of this script were provided by Kevin Befus (University of Arkansas, formerly University of Wyoming)
     """    
     
     obj1 = []
@@ -107,7 +107,7 @@ def loadDataExcel(dataToPlot, mainSheet = 'Samples', dataSheet = 'ZrUPb', ID_col
     obj3 = []
     obj4 = []
     for i in range(len(dataToPlot)):
-        dfs = pd.read_excel(dataToPlot[i],sheet_name=None)
+        dfs = pd.read_excel(dataToPlot[i],sheet_name=None, engine='openpyxl')
         main_df = None
         main_df = dfs[mainSheet]
         samples_df = main_df.copy()
@@ -178,7 +178,7 @@ def plotSampleDist(main_byid_df, ID_col = 'Sample_ID', bestAge = 'BestAge', numB
     
     return
                 
-def sampleToData(sampleList, main_byid_df, sampleLabel='Sample_ID', bestAge='BestAge', bestAgeErr='BestAge_err', sigma='1sigma'):
+def sampleToData(sampleList, main_byid_df, sampleLabel='Sample_ID', bestAge='BestAge', bestAgeErr='BestAge_err', sigma='1sigma', ID_col='Sample_ID', verify=False):
     """
     Returns arrays of single grain ages, 1 sigma errors, the number of analyses, and labels for
     individual samples or groups of samples
@@ -194,7 +194,9 @@ def sampleToData(sampleList, main_byid_df, sampleLabel='Sample_ID', bestAge='Bes
     bestAge : (optional) The name of the column that contains the 'Best U-Pb Age' of the analysis. Default is 'BestAge'
     bestAgeErr : (optional) The name of the column that contains the 'Best U-Pb Age' uncertainty of the analysis. Default is 'BestAge_err'
     sigma : (optional) Specify whether bestAgeErr are 1-sigma or 2-sigma errors. Default is '1sigma', but '2sigma' can also be specified.
-
+    ID_col : (optional) The name of the column that contains unique sample identifiers. Default is 'Sample_ID'
+    verify : (optional) set to True to perform a check that all samples are in the database (warning, increases load time for large sampleLists)
+ 
     Returns
     -------
     ages : array of ages for each sample or sample group
@@ -215,12 +217,13 @@ def sampleToData(sampleList, main_byid_df, sampleLabel='Sample_ID', bestAge='Bes
         for i in range(N):
             samples = sampleList[i][0]
             # Verify that all samples are in the database
-            if not all(sample in list(main_byid_df.Sample_ID) for sample in sampleList[i][0]):
-                print('These samples are not in the database - check for typos!')
-                print(list(np.setdiff1d(sampleList[i][0],list(main_byid_df.Sample_ID))))
-                print('Function stopped')
-                stop = True
-                break
+            if verify:
+                if not all(sample in list(main_byid_df[ID_col]) for sample in sampleList[i][0]):
+                    print('These samples are not in the database - check for typos!')
+                    print(list(np.setdiff1d(sampleList[i][0],list(main_byid_df[ID_col]))))
+                    print('Function stopped')
+                    stop = True
+                    break
             sampleAges = []
             sampleErrors = []
             for sample in samples:                             
@@ -237,12 +240,13 @@ def sampleToData(sampleList, main_byid_df, sampleLabel='Sample_ID', bestAge='Bes
     else:
         for sample in sampleList:
             # Verify that all samples are in the database
-            if not all(sample in list(main_byid_df.Sample_ID) for sample in sampleList):
-                print('These samples are not in the database - check for typos!')
-                print(list(np.setdiff1d(sampleList,list(main_byid_df.Sample_ID))))
-                print('Function stopped')
-                stop = True
-                break            
+            if verify:
+                if not all(sample in list(main_byid_df[ID_col]) for sample in sampleList):
+                    print('These samples are not in the database - check for typos!')
+                    print(list(np.setdiff1d(sampleList,list(main_byid_df[ID_col]))))
+                    print('Function stopped')
+                    stop = True
+                    break            
             ages.append(main_byid_df.loc[sample, bestAge])
             if sigma == '2sigma':
                 errors.append(main_byid_df.loc[sample, bestAgeErr]/2.)
@@ -251,12 +255,13 @@ def sampleToData(sampleList, main_byid_df, sampleLabel='Sample_ID', bestAge='Bes
             numGrains.append(len(main_byid_df.loc[sample, bestAge]))
             labels.append(main_byid_df.loc[sample,sampleLabel])
 
-    if not stop: # Only check for missing data if function not terminated beforehand
-        if np.min([len(x) for x in ages]) == 0: # Check whether any of the samples returned no data
-            samples_no_data = np.asarray(sampleList)[[len(x)==0 for x in ages]] # Return a list of the samples with no data
-            print('Warning! These samples have no data: ',samples_no_data)
-            print('Please check for consistency in sample naming')
-            print('and/or verify that all data have not been filtered')
+    if verify:
+        if not stop: # Only check for missing data if function not terminated beforehand
+            if np.min([len(x) for x in ages]) == 0: # Check whether any of the samples returned no data
+                samples_no_data = np.asarray(sampleList)[[len(x)==0 for x in ages]] # Return a list of the samples with no data
+                print('Warning! These samples have no data: ',samples_no_data)
+                print('Please check for consistency in sample naming')
+                print('and/or verify that all data have not been filtered')
 
     return ages, errors, numGrains, labels
 
