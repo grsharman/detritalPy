@@ -107,7 +107,10 @@ def loadDataExcel(dataToPlot, mainSheet = 'Samples', dataSheet = 'ZrUPb', ID_col
     obj3 = []
     obj4 = []
     for i in range(len(dataToPlot)):
-        dfs = pd.read_excel(dataToPlot[i],sheet_name=None, engine='openpyxl')
+        if dataToPlot[i].endswith('.xlsx'):
+            dfs = pd.read_excel(dataToPlot[i],sheet_name=None, engine='openpyxl')
+        if dataToPlot[i].endswith('.xls'):
+            dfs = pd.read_excel(dataToPlot[i],sheet_name=None, engine='xlrd')
         main_df = None
         main_df = dfs[mainSheet]
         samples_df = main_df.copy()
