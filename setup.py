@@ -6,7 +6,7 @@ with open('README.md', "r") as fh:
 setuptools.setup(
     name="detritalpy",
     packages=['detritalpy'],    
-    version="1.3.25",
+    version="1.3.26",
     author="Glenn Sharman",
     author_email="gsharman@uark.edu",
     description="A Python-based toolset for visualizing and analyzing detrital geo-thermochronologic data",
