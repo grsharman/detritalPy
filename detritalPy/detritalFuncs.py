@@ -3369,14 +3369,18 @@ def KDEcalcAges(ages, x1=0, x2=4500, xdif=1, bw=2.5, bw_x=None, cumulative=False
         KDE = np.zeros(shape=(len(ages),KDE_age.shape[0])) # Make a zero array of appropriate shape
 
         for k in range(len(ages)):
+            kde = np.zeros_like(KDE_age, dtype=float)
             for i in range(len(bw)):
                 ages_i = ages[k][[all(x) for x in list(zip(np.asarray(ages[k]>=bw_x[i]),np.asarray(ages[k]<=bw_x[i+1])))]]
                 if len(ages_i) > 0:
-                    KDE_i = KDE_bw_selector([ages_i], x1=x1, x2=x2, xdif=xdif, bw=bw[i], cumulative=cumulative)[1]
+                    kde_i = KDE_bw_selector([ages_i], x1=x1, x2=x2, xdif=xdif, bw=bw[i], cumulative=False)[1]
                 else: # If no dates are present in the selected x-axis range
-                    KDE_i = np.zeros(shape=KDE_age.shape)
-                KDE[k] += KDE_i[0]
-            KDE[k] = KDE[k]/np.sum(KDE[k]) # Normalized, such that area under the curve = 1
+                    kde_i = np.zeros(shape=KDE_age.shape)
+                kde += kde_i[0]*(len(ages_i)/len(ages[k])) # Normalize the KDE according to the proportion of ages that make it up
+            if cumulative:
+                KDE[k,:] = np.cumsum(kde)
+            else:
+                KDE[k,:] = kde
         return KDE_age, KDE
 
 def KDE_bw_selector(ages, x1=0, x2=4500, xdif=1, bw=2.5, cumulative=False):
@@ -3384,11 +3388,11 @@ def KDE_bw_selector(ages, x1=0, x2=4500, xdif=1, bw=2.5, cumulative=False):
     Helper function for selecting which KDE calculation to use, depending on choice of bandwdith
     '''
     if bw == 'ISJ' or bw == 'scott' or bw == 'silverman' or type(bw) != str:
-        KDE_age, KDE = KDEcalcAges_KDEpy(ages=ages, x1=x1, x2=x2, bw=bw, cumulative=cumulative)
+        KDE_age, KDE = KDEcalcAges_KDEpy(ages=ages, x1=x1, x2=x2, bw=bw, xdif=xdif, cumulative=cumulative)
     if bw == 'optimizedVariable':
-        KDE_age, KDE = KDEcalcAgesLocalAdapt(ages=ages, x1=x1, x2=x2, cumulative=cumulative)
+        KDE_age, KDE = KDEcalcAgesLocalAdapt(ages=ages, x1=x1, x2=x2, xdif=xdif, cumulative=cumulative)
     if bw == 'optimizedFixed':
-        KDE_age, KDE = KDEcalcAgesGlobalAdapt(ages=ages, x1=x1, x2=x2, cumulative=cumulative)
+        KDE_age, KDE = KDEcalcAgesGlobalAdapt(ages=ages, x1=x1, x2=x2, xdif=xdif, cumulative=cumulative)
         
     return KDE_age, KDE
 
@@ -3455,8 +3459,8 @@ def KDEcalcAges_KDEpy(ages, x1=0, x2=4500, xdif=1, bw=2.5, cumulative=False):
     for i in range(len(ages)):
         kde = FFTKDE(bw=bw, kernel='gaussian').fit(ages[i]).evaluate(KDE_age)
         if cumulative:
-            kde = np.cumsum(kde)*xdif # Seems like this must be multiplied by xdif for it to work
-        KDE[i,:] = kde
+            kde = np.cumsum(kde)
+        KDE[i,:] = kde*xdif # Ensures proper scaling
     KDE_age = KDE_age[int(x1/xdif):int((x2+xdif)/xdif)] # Only select the values within the specified plotting age range
     KDEportionRange = np.arange(x1, x2+xdif, xdif)
     KDEportionEmpty = np.empty(shape=(len(ages),len(KDEportionRange)))
@@ -3494,8 +3498,8 @@ def KDEcalcAgesLocalAdapt(ages, x1=0, x2=4500, xdif=1, cumulative=False):
     for i in range(len(ages)):
         kde = akde.sskernel(np.asarray(ages[i]), tin=KDE_age, nbs=1000)[0]
         if cumulative:
-            kde = np.cumsum(kde)*xdif # Seems like this must be multiplied by xdif for it to work
-        KDE[i,:] = kde
+            kde = np.cumsum(kde)*xdif
+        KDE[i,:] = kde*xdif # Ensures proper scaling
     KDE_age = KDE_age[int(x1/xdif):int((x2+xdif)/xdif)] # Only select the values within the specified plotting age range
     KDEportionRange = np.arange(x1, x2+xdif, xdif)
     KDEportionEmpty = np.empty(shape=(len(ages),len(KDEportionRange)))
@@ -3533,8 +3537,8 @@ def KDEcalcAgesGlobalAdapt(ages, x1=0, x2=4500, xdif=1, cumulative=False):
     for i in range(len(ages)):
         kde = akde.ssvkernel(np.asarray(ages[i]), tin=KDE_age, nbs=100)[0]
         if cumulative:
-            kde = np.cumsum(kde)*xdif # Seems like this must be multiplied by xdif for it to work
-        KDE[i,:] = kde
+            kde = np.cumsum(kde)
+        KDE[i,:] = kde*xdif # Ensures proper scaling
     KDE_age = KDE_age[int(x1/xdif):int((x2+xdif)/xdif)] # Only select the values within the specified plotting age range
     KDEportionRange = np.arange(x1, x2+xdif, xdif)
     KDEportionEmpty = np.empty(shape=(len(ages),len(KDEportionRange)))
