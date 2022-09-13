@@ -116,7 +116,7 @@ def YC2s(ages, errors, min_cluster_size=3):
         data_err2s.sort(key=lambda d: d[0] + d[1]) # Sort based on age + 2s error
 
         YC2s_cluster, YC2s_imax = find_youngest_cluster(data_err2s, min_cluster_size)
-        YC2s_WM = dFunc.weightedMean(np.array([d[0] for d in YC2s_cluster]), np.array([d[1] for d in YC2s_cluster]))
+        YC2s_WM = dFunc.weightedMean(np.array([d[0] for d in YC2s_cluster]), np.array([d[1] for d in YC2s_cluster])/2.)
 
         # Return NaN if YC2s did not find a cluster
         if YC2s_WM[0] == 0.0:
@@ -256,17 +256,18 @@ def Y3Zo(ages, errors, sigma=2):
     for i in range(len(ages)):
 
         if sigma == 1:
-            data_err = list(zip(ages[i], errors[i]))
-            data_err.sort(key=lambda d: d[0] + d[1]) # Sort based on age + 1s error     
+            data_err1s = list(zip(ages[i], errors[i]))
+            data_err1s.sort(key=lambda d: d[0] + d[1]) # Sort based on age + 1s error     
         if sigma == 2:
-            data_err = list(zip(ages[i], errors[i]*2))
-            data_err.sort(key=lambda d: d[0] + d[1]) # Sort based on age + 2s error
+            data_err2s = list(zip(ages[i], errors[i]*2))
+            data_err2s.sort(key=lambda d: d[0] + d[1]) # Sort based on age + 2s error
 
-        Y3Zo_cluster, Y3Zo_imax = find_youngest_cluster(data_err, 3)
         if sigma == 1:
+            Y3Zo_cluster, Y3Zo_imax = find_youngest_cluster(data_err1s, 3)
             Y3Zo_WM, Y3Zo_WM_err2s, Y3Zo_WM_MSWD = dFunc.weightedMean(np.array([d[0] for d in Y3Zo_cluster[:3]]), np.array([d[1] for d in Y3Zo_cluster[:3]]))
         if sigma == 2:
-            Y3Zo_WM, Y3Zo_WM_err2s, Y3Zo_WM_MSWD = dFunc.weightedMean(np.array([d[0] for d in Y3Zo_cluster[:3]]), np.array([d[1]/2 for d in Y3Zo_cluster[:3]]))
+            Y3Zo_cluster, Y3Zo_imax = find_youngest_cluster(data_err2s, 3)
+            Y3Zo_WM, Y3Zo_WM_err2s, Y3Zo_WM_MSWD = dFunc.weightedMean(np.array([d[0] for d in Y3Zo_cluster[:3]]), np.array([d[1]/2 for d in Y3Zo_cluster[:3]])/2.)
         
         # Return NaN if Y3Zo did not find a cluster
         if Y3Zo_WM == 0.0:
@@ -489,6 +490,11 @@ def find_youngest_cluster(data_err, min_cluster_size):
     Parameters
     ----------
     data_err : array of tuples [(age1, error1), (age2, error2), etc.]
+
+    Returns
+    -------
+    Array of tuples of youngest cluster of analyses that overlap
+    Number of analyses in the youngest cluster
 
     """
     i_min = 0
