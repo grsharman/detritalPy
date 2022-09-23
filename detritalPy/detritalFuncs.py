@@ -435,7 +435,7 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
     n = len(sampleList)
     
     # Sets figure font options
-    font = {'family' : 'Arial',
+    font = {'family' : 'sans-serif',
             'weight' : 'normal',
             'size'   : 14}
     plt.rc('font', **font)
@@ -934,7 +934,7 @@ def plotAll_2(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
         h = n
     
     # Sets figure font options
-    font = {'family' : 'Arial',
+    font = {'family' : 'sans-serif',
             'weight' : 'normal',
             'size'   : 14}
     plt.rc('font', **font)
@@ -1172,7 +1172,7 @@ def plotRimsVsCores(main_byid_df, sampleList, ages, errors, labels, x1=0, x2=400
     import matplotlib.patches as patches
 
     # Sets figure font options
-    font = {'family' : 'Arial',
+    font = {'family' : 'sans-serif',
             'weight' : 'normal',
             'size'   : 14}
     plt.rc('font', **font)
@@ -1341,7 +1341,7 @@ def plotDouble(sampleList, main_byid_df, ages, errors, numGrains, labels, variab
     n = len(sampleList)
     
     # Sets figure font options
-    font = {'family' : 'Arial',
+    font = {'family' : 'sans-serif',
             'weight' : 'normal',
             'size'   : 14}
     plt.rc('font', **font)
