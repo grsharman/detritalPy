@@ -2989,7 +2989,7 @@ def exportDist(ages, errors, labels, exportType, cumulative, x1, x2, xdif, bw, f
     for i in range(len(dist)):
         for j in range(len(dist[i])):
             dist[i][j] = round(dist[i][j], 5)
-        if normalize:
+        if normalize and exportType != 'CDF':
             dist[i] = dist[i]/sum(dist[i])      
     
     pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
@@ -3249,7 +3249,7 @@ def calcDFW(CDF, epsilon):
     return DFWmin, DFWmax
                 
 
-def CDFcalcAges(ages, x1=0, x2=4501, xdif=1):
+def CDFcalcAges(ages, x1=0, x2=4500, xdif=1):
     """
     Computes the CDF for an array of samples.
     
@@ -3350,7 +3350,7 @@ def KDEcalcAges(ages, x1=0, x2=4500, xdif=1, bw=2.5, bw_x=None, cumulative=False
         if bw_x is not None:
             print('Warning: If a bandwidth x-axis split is desired, must specify bandwidth values to use by placing bw in a list: e.g., bw=[2.5, 10]')
 
-        KDE_age, KDE = KDE_bw_selector(ages=ages, x1=x1, x2=x2, bw=bw, cumulative=cumulative)
+        KDE_age, KDE = KDE_bw_selector(ages=ages, x1=x1, x2=x2, xdif=xdif, bw=bw, cumulative=cumulative)
         return KDE_age, KDE
 
     else:
@@ -3398,7 +3398,7 @@ def KDE_bw_selector(ages, x1=0, x2=4500, xdif=1, bw=2.5, cumulative=False):
 
 def KDEcalcAges_2(ages, x1=0, x2=4500, xdif=1, bw=2.5, cumulative=False):
     """
-    Computes the KDE for an array of ages. Deprecated - use KDEcalcAges_KDEpy() instead.
+    Computes the KDE for an array of ages. Deprecated - use KDEcalcAges() instead.
     
     Parameters
     ----------
@@ -3434,6 +3434,7 @@ def KDEcalcAges_KDEpy(ages, x1=0, x2=4500, xdif=1, bw=2.5, cumulative=False):
     """
     Computes the KDE for an array of ages.
     Uses the KDEpy library
+    Note: Cannot use with x-axis values beyond 4500 Ma
     
     Parameters
     ----------
