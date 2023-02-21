@@ -872,7 +872,7 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                         axHist.get_xaxis().set_visible(False) # Do not plot the x-axis if it has already been plotted
                     
                 # Pie plot
-                if plotPIE:
+                if plotPIE and h==1: # Only plot pie if plotting on the 1st axis
                     if len(np.shape(agebins)) == 1:
                         hist = np.histogram(ages[i], agebins)[0]
                     if len(np.shape(agebins)) == 2:
@@ -2372,7 +2372,10 @@ class MDS_class:
         ax.set_xticklabels(self.sampleList)
         ax.set_yticklabels(self.sampleList)
         cbar = figHeatMap.colorbar(im)
-        cbar.set_label(label=self.label)
+        if plotType == 'dissimilarity':
+            cbar.set_label(label=self.label)
+        if plotType == 'distance':
+            cbar.set_label(label='Distance')
         if plotValues:
             for i in range(len(self.ages)):
                 for j in range(len(self.ages)):
