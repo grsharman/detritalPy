@@ -872,7 +872,7 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                         axHist.get_xaxis().set_visible(False) # Do not plot the x-axis if it has already been plotted
                     
                 # Pie plot
-                if plotPIE and h==1: # Only plot pie if plotting on the 1st axis
+                if plotPIE and h==0: # Only plot pie if plotting on the 1st axis
                     if len(np.shape(agebins)) == 1:
                         hist = np.histogram(ages[i], agebins)[0]
                     if len(np.shape(agebins)) == 2:
