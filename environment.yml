@@ -1,0 +1,22 @@
+# run: conda env create --file environment.yml
+name: detritalpy
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - python>=3.9
+  - pip
+  - numpy
+  - matplotlib
+  - pandas
+  - xlrd
+  - folium
+  - vincent
+  - simplekml
+  - scipy
+  - scikit-learn
+  - openpyxl
+  - pip:
+    - KDEpy
+    - peakutils
+

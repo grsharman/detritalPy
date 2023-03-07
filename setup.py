@@ -16,7 +16,7 @@ setuptools.setup(
     url="https://github.com/grsharman/detritalpy",
     download_url="https://github.com/grsharman/detritalPy/archive/v1.3.34.tar.gz",
     install_requires=['numpy','matplotlib','pandas','xlrd','folium','vincent','simplekml',
-        'scipy','sklearn','KDEpy','peakutils','openpyxl'],
+        'scipy','scikit-learn','KDEpy','peakutils','openpyxl'],
     classifiers=[
         "Programming Language :: Python :: 3",
         'Intended Audience :: Science/Research',
