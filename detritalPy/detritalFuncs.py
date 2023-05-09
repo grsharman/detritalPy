@@ -1222,7 +1222,7 @@ def plotRimsVsCores(main_byid_df, sampleList, ages, errors, labels, x1=0, x2=400
                         del rimVsCore[grain]
                 for grain in rimVsCore:
                     if plotError:
-                        ax.errorbar(rimVsCore[grain][2], rimVsCore[grain][0], rimVsCore[grain][3], rimVsCore[grain][1], fmt='s', color=colorMe(i, colors), ecolor='gray', capthick=2, label=labels[i] if c == 0 else "")
+                        ax.errorbar(x=rimVsCore[grain][2], y=rimVsCore[grain][0], xerr=rimVsCore[grain][3], yerr=rimVsCore[grain][1], fmt='s', color=colorMe(i, colors), ecolor='gray', capthick=2, label=labels[i] if c == 0 else "")
                     else:
                         ax.plot(rimVsCore[grain][2],rimVsCore[grain][0],'s',color=colorMe(i, colors),label=labels[i] if c == 0 else "")
                     c = c+1        
@@ -1243,7 +1243,7 @@ def plotRimsVsCores(main_byid_df, sampleList, ages, errors, labels, x1=0, x2=400
             c = 0 # Counter variable used to ensure that the label is only plotted once per sample
             for grain in rimVsCore:
                 if plotError:
-                    ax.errorbar(rimVsCore[grain][2], rimVsCore[grain][0], rimVsCore[grain][3], rimVsCore[grain][1], fmt='s', 
+                    ax.errorbar(x=rimVsCore[grain][2], y=rimVsCore[grain][0], xerr=rimVsCore[grain][3], yerr=rimVsCore[grain][1], fmt='s', 
                             color=colorMe(i, colors), ecolor='gray', capthick=2, label=labels[i] if c == 0 else "")
                 else:
                     ax.plot(rimVsCore[grain][2],rimVsCore[grain][0],'s',color=colorMe(i, colors),label=labels[i] if c == 0 else "")
