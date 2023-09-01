@@ -267,7 +267,7 @@ def Y3Zo(ages, errors, sigma=2):
             Y3Zo_WM, Y3Zo_WM_err2s, Y3Zo_WM_MSWD = dFunc.weightedMean(np.array([d[0] for d in Y3Zo_cluster[:3]]), np.array([d[1] for d in Y3Zo_cluster[:3]]))
         if sigma == 2:
             Y3Zo_cluster, Y3Zo_imax = find_youngest_cluster(data_err2s, 3)
-            Y3Zo_WM, Y3Zo_WM_err2s, Y3Zo_WM_MSWD = dFunc.weightedMean(np.array([d[0] for d in Y3Zo_cluster[:3]]), np.array([d[1]/2 for d in Y3Zo_cluster[:3]])/2.)
+            Y3Zo_WM, Y3Zo_WM_err2s, Y3Zo_WM_MSWD = dFunc.weightedMean(np.array([d[0] for d in Y3Zo_cluster[:3]]), np.array([d[1]/2 for d in Y3Zo_cluster[:3]]))
         
         # Return NaN if Y3Zo did not find a cluster
         if Y3Zo_WM == 0.0:
