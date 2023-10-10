@@ -102,12 +102,12 @@ def sshist(x, N=range(2, 501), SN=30):
     # compute cost function over each possible number of bins
     Cs = np.zeros((len(N), SN))
     for i, n in enumerate(N):  # loop over number of bins
-        shift = np.linspace(0, D[i], np.int(SN))
+        shift = np.linspace(0, D[i], int(SN))
         for p, sh in enumerate(shift):  # loop over shift window positions
 
             # define bin edges
             edges = np.linspace(x_min + sh - D[i]/2,
-                                x_max + sh - D[i]/2, np.int(N[i]+1))
+                                x_max + sh - D[i]/2, int(N[i]+1))
 
             # count number of events in these bins
             ki = np.histogram(x, edges)
@@ -125,7 +125,7 @@ def sshist(x, N=range(2, 501), SN=30):
     idx = np.argmin(C)
     optN = N[idx]
     optD = D[idx]
-    edges = np.linspace(x_min, x_max, np.int(optN))
+    edges = np.linspace(x_min, x_max, int(optN))
 
     return optN, optD, edges, C, N
 
@@ -188,7 +188,7 @@ def sskernel(x, tin=None, W=None, nbs=1000):
         T = np.max(x) - np.min(x)
         dx = np.sort(np.diff(np.sort(x)))
         dt_samp = dx[np.nonzero(dx)][0]
-        tin = np.linspace(np.min(x), np.max(x), np.int(min(np.ceil(T / dt_samp), 1e3)))
+        tin = np.linspace(np.min(x), np.max(x), int(min(np.ceil(T / dt_samp), 1e3)))
         t = tin
         x_ab = x[(x >= min(tin)) & (x <= max(tin))]
     else:
@@ -197,7 +197,7 @@ def sskernel(x, tin=None, W=None, nbs=1000):
         dx = np.sort(np.diff(np.sort(x)))
         dt_samp = dx[np.nonzero(dx)][0]
         if dt_samp > min(np.diff(tin)):
-            t = np.linspace(min(tin), max(tin), np.int(min(np.ceil(T / dt_samp), 1e3)))
+            t = np.linspace(min(tin), max(tin), int(min(np.ceil(T / dt_samp), 1e3)))
         else:
             t = tin
 
@@ -207,7 +207,7 @@ def sskernel(x, tin=None, W=None, nbs=1000):
     # create the finest histogram
     thist = np.concatenate((t, (t[-1]+dt)[np.newaxis]))
     y_hist = np.histogram(x_ab, thist-dt/2)[0]
-    N = sum(y_hist).astype(np.float)
+    N = sum(y_hist).astype(float)
     y_hist = y_hist / N / dt
 
     # global search if input 'W' is defined
@@ -275,8 +275,8 @@ def sskernel(x, tin=None, W=None, nbs=1000):
         yb_buf = yb_buf / np.sum(yb_buf * dt)
         yb[i, ] = np.interp(tin, t, yb_buf)
     ybsort = np.sort(yb, axis=0)
-    y95b = ybsort[np.int(np.floor(0.05 * nbs)), :]
-    y95u = ybsort[np.int(np.floor(0.95 * nbs)), :]
+    y95b = ybsort[int(np.floor(0.05 * nbs)), :]
+    y95u = ybsort[int(np.floor(0.95 * nbs)), :]
     confb95 = np.concatenate((y95b[np.newaxis], y95u[np.newaxis]), axis=0)
 
     # return outputs
@@ -388,7 +388,7 @@ def ssvkernel(x, tin=None, M=80, nbs=100, WinFunc='Boxcar'):
         T = np.max(x) - np.min(x)
         dx = np.sort(np.diff(np.sort(x)))
         dt_samp = dx[np.nonzero(dx)][0]
-        tin = np.linspace(np.min(x), np.max(x), np.int(min(np.ceil(T / dt_samp), 1e3)))
+        tin = np.linspace(np.min(x), np.max(x), int(min(np.ceil(T / dt_samp), 1e3)))
         t = tin
         x_ab = x[(x >= min(tin)) & (x <= max(tin))]
     else:
@@ -397,7 +397,7 @@ def ssvkernel(x, tin=None, M=80, nbs=100, WinFunc='Boxcar'):
         dx = np.sort(np.diff(np.sort(x)))
         dt_samp = dx[np.nonzero(dx)][0]
         if dt_samp > min(np.diff(tin)):
-            t = np.linspace(min(tin), max(tin), np.int(min(np.ceil(T / dt_samp), 1e3)))
+            t = np.linspace(min(tin), max(tin), int(min(np.ceil(T / dt_samp), 1e3)))
         else:
             t = tin
 
@@ -408,10 +408,10 @@ def ssvkernel(x, tin=None, M=80, nbs=100, WinFunc='Boxcar'):
     thist = np.concatenate((t, (t[-1]+dt)[np.newaxis]))
     y_hist = np.histogram(x_ab, thist-dt/2)[0] / dt
     L = y_hist.size
-    N = sum(y_hist * dt).astype(np.float)
+    N = sum(y_hist * dt).astype(float)
 
     # initialize window sizes
-    W = logexpSSV(np.linspace(ilogexpSSV(5 * dt), ilogexpSSV(T), np.int(M)))
+    W = logexpSSV(np.linspace(ilogexpSSV(5 * dt), ilogexpSSV(T), int(M)))
 
     # compute local cost functions
     c = np.zeros((M, L))
@@ -489,8 +489,8 @@ def ssvkernel(x, tin=None, M=80, nbs=100, WinFunc='Boxcar'):
         yb_buf = yb_buf / np.sum(yb_buf * dt)
         yb[i, :] = np.interp(tin, t, yb_buf)
     ybsort = np.sort(yb, axis=0)
-    y95b = ybsort[np.int(np.floor(0.05 * nbs)), :]
-    y95u = ybsort[np.int(np.floor(0.95 * nbs)), :]
+    y95b = ybsort[int(np.floor(0.05 * nbs)), :]
+    y95u = ybsort[int(np.floor(0.95 * nbs)), :]
     confb95 = np.concatenate((y95b[np.newaxis], y95u[np.newaxis]), axis=0)
 
     # return outputs
@@ -550,12 +550,12 @@ def fftkernel(x, w):
     L = x.size
     Lmax = L + 3 * w
     n = 2 ** np.ceil(np.log2(Lmax))
-    X = np.fft.fft(x, n.astype(np.int))
+    X = np.fft.fft(x, n.astype(int))
 
     # generate kernel domain
-    f = np.linspace(0, n-1, np.int(n)) / n
-    f = np.concatenate((-f[0: np.int(n / 2 + 1)],
-                        f[1: np.int(n / 2 - 1 + 1)][::-1]))
+    f = np.linspace(0, n-1, int(n)) / n
+    f = np.concatenate((-f[0: int(n / 2 + 1)],
+                        f[1: int(n / 2 - 1 + 1)][::-1]))
 
     # evaluate kernel
     K = np.exp(-0.5 * (w * 2 * np.pi * f) ** 2)
@@ -572,12 +572,12 @@ def fftkernelWin(x, w, WinFunc):
     L = x.size
     Lmax = L + 3 * w
     n = 2 ** np.ceil(np.log2(Lmax))
-    X = np.fft.fft(x, n.astype(np.int))
+    X = np.fft.fft(x, n.astype(int))
 
     # generate kernel domain ###
-    f = np.linspace(0, n-1, np.int(n)) / n
-    f = np.concatenate((-f[0: np.int(n / 2 + 1)],
-                        f[1: np.int(n / 2 - 1 + 1)][::-1]))
+    f = np.linspace(0, n-1, int(n)) / n
+    f = np.concatenate((-f[0: int(n / 2 + 1)],
+                        f[1: int(n / 2 - 1 + 1)][::-1]))
     t = 2 * np.pi * f
 
     # determine window function - evaluate kernel
