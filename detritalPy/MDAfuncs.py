@@ -8,16 +8,16 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import pathlib
 
-def YSG(ages, errors, sigma=2):
+def YSG(ages, errors, sigma=1):
     """
-    Calculate the youngest single grain (YSG), where the YSG is defined as the youngest grain age plus error of uncertainty sigma (default is 2 sigma).
+    Calculate the youngest single grain (YSG), where the YSG is defined as the youngest grain age plus error of uncertainty sigma (default is 1 sigma).
 
     Parameters
     ----------
     ages : a 2-D array of ages, len(ages)=number of samples or sample groups
     errors : a 2-D array of 1-sigma errors for each sample or sample group, len(errors)=number of samples or sample groups
-    sigma : (optional) Options are 1 or 2 (default is 2)
-=
+    sigma : (optional) Options are 1 or 2 (default is 1)
+
     Returns
     -------
     YSG : a list of [youngest single grain (Ma), 2-sigma error of the youngest single grain (Ma)] such that len(YSG) = len(ages)
@@ -43,15 +43,17 @@ def YSG(ages, errors, sigma=2):
 
     return YSG
 
-def YC1s(ages, errors, min_cluster_size=2):
+def YC1s(ages, errors, min_cluster_size=2, contiguous=True):
     """
     Calculate the youngest grain cluster that overlaps at 1-sigma error (see Dickinson and Gehrels (2009): Earth and Planetary Science Letters and Sharman et al. (2018): The Depositional Record for an explanation).
+    Note: The result obtained is dependent on how analyses are sorted and whether a cluster consists of 'contiguous' analyses
 
     Paramters
     ---------
     ages : a 2-D array of ages, len(ages)=number of samples or sample groups
     errors : a 2-D array of 1-sigma errors for each sample or sample group, len(errors)=number of samples or sample groups
     min_cluster_size : (optional) minimum number of grains in the cluster (default = 2)
+    contiguous : bool, set to True to require that analyses in a cluster be adjacent (default = True) 
 
     Returns
     -------
@@ -69,12 +71,9 @@ def YC1s(ages, errors, min_cluster_size=2):
     for i in range(len(ages)):
 
         data_err1s = list(zip(ages[i], errors[i]))
-        data_err1s_ageSort = list(zip(ages[i], errors[i]))
-        data_err1s_ageSort.sort(key=lambda d: d[0]) # Sort based on age
         data_err1s.sort(key=lambda d: d[0] + d[1]) # Sort based on age + 1s error
 
-
-        YC1s_cluster, YC1s_imax = find_youngest_cluster(data_err1s, min_cluster_size)
+        YC1s_cluster = find_youngest_cluster(data_err1s, min_cluster_size, sort_by='none', contiguous=contiguous)
         YC1s_WM = dFunc.weightedMean(np.array([d[0] for d in YC1s_cluster]), np.array([d[1] for d in YC1s_cluster]))
 
         # Return NaN if YC1s did not find a cluster
@@ -85,15 +84,17 @@ def YC1s(ages, errors, min_cluster_size=2):
 
     return YC1s
 
-def YC2s(ages, errors, min_cluster_size=3):
+def YC2s(ages, errors, min_cluster_size=3, contiguous=True):
     """
     Calculate the youngest grain cluster that overlaps at 2-sigma error (see Dickinson and Gehrels (2009): Earth and Planetary Science Letters and Sharman et al. (2018): The Depositional Record for an explanation).
+    Note: The result obtained is dependent on how analyses are sorted and whether a cluster consists of 'contiguous' analyses
 
     Paramters
     ---------
     ages : a 2-D array of ages, len(ages)=number of samples or sample groups
     errors : a 2-D array of 1-sigma errors for each sample or sample group, len(errors)=number of samples or sample groups
     min_cluster_size : (optional) minimum number of grains in the cluster (default = 3)
+    contiguous : bool, set to True to require that analyses in a cluster be adjacent (default = True)
 
     Returns
     -------
@@ -111,11 +112,9 @@ def YC2s(ages, errors, min_cluster_size=3):
     for i in range(len(ages)):
 
         data_err2s = list(zip(ages[i], errors[i]*2))
-        data_err2s_ageSort = list(zip(ages[i], errors[i]*2))
-        data_err2s_ageSort.sort(key=lambda d: d[0]) # Sort based on age
         data_err2s.sort(key=lambda d: d[0] + d[1]) # Sort based on age + 2s error
 
-        YC2s_cluster, YC2s_imax = find_youngest_cluster(data_err2s, min_cluster_size)
+        YC2s_cluster = find_youngest_cluster(data_err2s, min_cluster_size, sort_by='none', contiguous=contiguous)
         YC2s_WM = dFunc.weightedMean(np.array([d[0] for d in YC2s_cluster]), np.array([d[1] for d in YC2s_cluster])/2.)
 
         # Return NaN if YC2s did not find a cluster
@@ -131,6 +130,7 @@ def YDZ(ages, errors, iterations=10000, chartOutput = False, bins=25):
     """"
 
     NOTE: I Have not been able to reproduce Isoplot YDZ results using this adaptation - see Appendix B of Sharman and Malkowski (Earth-Science Reviews)
+    Warning: Use this algorithm at your caution
 
     Calculate the youngest detrital zircon age based on the Monte Carlo approach of IsoPlot (Ludwig, 2012). The youngest analyses (i.e., within 5 sigma of the youngest analysis) are repeatedly resampled by a probability distribution defined by their age and uncertainty.
     
@@ -231,7 +231,7 @@ def Y3Za(ages, errors):
     return Y3Za
 
 
-def Y3Zo(ages, errors, sigma=2):
+def Y3Zo(ages, errors, sigma=2, contiguous=True):
     """
     Calculates the weighted mean average of the youngest three zircons that overlap within uncertainty of sigma (default is 2-sigma) (see discussion in Coutts et al. (2019): Geoscience Frontiers)
 
@@ -239,6 +239,7 @@ def Y3Zo(ages, errors, sigma=2):
     ages : a 2-D array of ages, len(ages)=number of samples or sample groups
     errors : a 2-D array of 1-sigma errors for each sample or sample group, len(errors)=number of samples or sample groups
     sigma : (optional) level of uncertainty to evaluate overlap (default is 2-sigma)
+    contiguous : bool, set to True to require that analyses in a cluster be adjacent (default = True)
 
     Returns
     -------
@@ -263,10 +264,10 @@ def Y3Zo(ages, errors, sigma=2):
             data_err2s.sort(key=lambda d: d[0] + d[1]) # Sort based on age + 2s error
 
         if sigma == 1:
-            Y3Zo_cluster, Y3Zo_imax = find_youngest_cluster(data_err1s, 3)
+            Y3Zo_cluster = find_youngest_cluster(data_err1s, min_cluster_size=3, sort_by='none', contiguous=contiguous)
             Y3Zo_WM, Y3Zo_WM_err2s, Y3Zo_WM_MSWD = dFunc.weightedMean(np.array([d[0] for d in Y3Zo_cluster[:3]]), np.array([d[1] for d in Y3Zo_cluster[:3]]))
         if sigma == 2:
-            Y3Zo_cluster, Y3Zo_imax = find_youngest_cluster(data_err2s, 3)
+            Y3Zo_cluster = find_youngest_cluster(data_err2s, min_cluster_size=3, sort_by='none', contiguous=contiguous)
             Y3Zo_WM, Y3Zo_WM_err2s, Y3Zo_WM_MSWD = dFunc.weightedMean(np.array([d[0] for d in Y3Zo_cluster[:3]]), np.array([d[1]/2 for d in Y3Zo_cluster[:3]]))
         
         # Return NaN if Y3Zo did not find a cluster
@@ -330,18 +331,22 @@ def YPP(ages, errors, min_cluster_size=2, thres=0.01, minDist=1, xdif=0.1):
 
     return YPP
 
-def YSP(ages, errors, min_cluster_size=2, MSWD_threshold=1):
+def YSP(ages, errors, min_cluster_size=2, MSWD_threshold=1, sort_by='age'):
     """
-    Calculates the youngest statistical population after Coutts et al. (2019): Geoscience Frontiers. The YSP is the weighted average of the youngest group of 2 or more analyses that have a MSWD close to the MSWD_threshold (default=1),
-    where the the MSWD of the youngest two analyses is less than the MSWD_threshold. The algorithm first considers the youngest two analyses. If they have an MSWD < 1, then a third grain is added and so forth.
-    The final analyses to be included in the weighted average is the one with the closest value to MSWD_threshold (default of 1).
+    Calculates the youngest statistical population after Coutts et al. (2019): Geoscience Frontiers. The YSP is the weighted average of the youngest group of 2 or more analyses that have a MSWD close to 1.
+    If the youngest two analyses have an MSWD < MSWD_threshold, then a third grain is added and so forth.
+    The final analyses to be included in the weighted average is the one with the closest MSWD value to 1.
+
+    Warning: There is subjectivity in how the YSP algorithm is interpreted and implemented, including what threshold to use for what MSWD is
+    sufficiently 'close to 1' and how analyses are sorted.
 
     Parameters
     ----------
     ages : a 2-D array of ages, len(ages)=number of samples or sample groups
     errors : a 2-D array of 1-sigma errors for each sample or sample group, len(errors)=number of samples or sample groups
     min_cluster_size : (optional) the minimum number of analyses to calculate a MSWD from (default = 2)
-    MSWD_threshold : (optional) the MSWD threshold from which to select analyses from
+    MSWD_threshold : (optional) the MSWD threshold of the youngest two analyses to begin searching for the cluster of analyses a MSWD close to 1
+    sort_by : (optional) how to sort the analyses prior to looping through (options: 'age', 'age+err1s','age+err2s')
 
     Returns
     -------
@@ -355,13 +360,21 @@ def YSP(ages, errors, min_cluster_size=2, MSWD_threshold=1):
         errors = [errors]   
 
     YSP = []
+
     for i in range(len(ages)): # One loop for each sample or sample group
         
-        # Zip ages and errors and sort by age
-        data_err1s_ageSort = list(zip(ages[i], errors[i]))
-        data_err1s_ageSort.sort(key=lambda d: d[0]) # Sort based on age
-        for j in range(len(data_err1s_ageSort)): # One loop for each analysis. Loop repeated if MSWD of the first pair is not <1.
+        # Zip ages and errors and sort
+        if sort_by == 'age':
+            data_err1s_ageSort = list(zip(ages[i], errors[i]))
+            data_err1s_ageSort.sort(key=lambda d: d[0]) # Sort based on age
+        if sort_by == 'age+err1s':
+            data_err1s_ageSort = list(zip(ages[i], errors[i]))
+            data_err1s_ageSort.sort(key=lambda d: d[0] + d[1]) # Sort based on age + 1s errors
+        if sort_by == 'age+err2s':
+            data_err1s_ageSort = list(zip(ages[i], errors[i]))
+            data_err1s_ageSort.sort(key=lambda d: d[0] + d[1]*2) # Sort based on age + 2s errors         
 
+        for j in range(len(data_err1s_ageSort)): # One loop for each analysis. Loop repeated if MSWD of the first pair is not <1.
             # Creat list of MSWD
             MSWD = []
             for k in range(len(data_err1s_ageSort)):
@@ -372,7 +385,7 @@ def YSP(ages, errors, min_cluster_size=2, MSWD_threshold=1):
             for k in range(len(data_err1s_ageSort)):
                 if k == 0: # Assign the first age an MSWD of 0 (so it is always included in the MSWD)
                     data_err1s_MSWD.append((data_err1s_ageSort[k][0], data_err1s_ageSort[k][1], 0))
-                else: # Assign analyses the MSWD of the previos analysis, such that the filtering returns the correct analyses
+                else: # Assign analyses the MSWD of the previous analysis, such that the filtering returns the correct analyses
                     data_err1s_MSWD.append((data_err1s_ageSort[k][0], data_err1s_ageSort[k][1], MSWD[k-1]))
 
             # Need to exit the algorithm if no YSP is found
@@ -381,14 +394,14 @@ def YSP(ages, errors, min_cluster_size=2, MSWD_threshold=1):
                 break
 
             # Find the index of the analysis with an MSWD closest to 1
-            idx = (np.abs(np.array([d[2] for d in data_err1s_MSWD][1:])-MSWD_threshold)).argmin()+1 # Need to add 1 because we excluded the first one that had an assigned MSWD of 0
+            idx = (np.abs(np.array([d[2] for d in data_err1s_MSWD][1:])-1)).argmin()+1 # Need to add 1 because we excluded the first one that had an assigned MSWD of 0
 
-            # Filter analyses beyond the one which has a MSWD closest to MSWD_threshold
+            # Filter analyses beyond the one which has a MSWD closest to 1
             agesFiltered = data_err1s_MSWD[0:idx+1]
 
             YSP_WM, YSP_WM_err2s, YSP_WM_MSWD = dFunc.weightedMean(np.array([d[0] for d in agesFiltered]), np.array([d[1] for d in agesFiltered]))
 
-            if (agesFiltered[1][2] < 1 and len(agesFiltered) >= min_cluster_size): # The first one is excluded because the MSWD is made to be 0. The second youngest analysis must have a MSWD < 1 to proceed. The minimum cluster size must also be met or exceeded.
+            if (agesFiltered[1][2] < MSWD_threshold and len(agesFiltered) >= min_cluster_size): # The first one is excluded because the MSWD is made to be 0. The second youngest analysis must have a MSWD < MSWD_threshold to proceed. The minimum cluster size must also be met or exceeded.
                 YSP.append([YSP_WM, YSP_WM_err2s, YSP_WM_MSWD, len(agesFiltered)])
                 break
             else:
@@ -396,10 +409,11 @@ def YSP(ages, errors, min_cluster_size=2, MSWD_threshold=1):
 
     return YSP
 
-
-def tauMethod(ages, errors, min_cluster_size=3, thres=0.01, minDist=1, xdif=1, chartOutput = False, x1=0, x2=4000):
+def tauMethod(ages, errors, min_cluster_size=3, thres=0.01, minDist=1, xdif=0.1, x1=0, x2=4000):
     """
     Calculates the tau parameter, which is the mean weighted average of analyses that fall between probability minima (troughs) of a PDP plot (after Barbeau et al. (2009): EPSL)
+
+    Note: results are sensitive to even minor troughs (probability minima)
 
     Parameters
     ----------
@@ -409,7 +423,6 @@ def tauMethod(ages, errors, min_cluster_size=3, thres=0.01, minDist=1, xdif=1, c
     thres : (optional) threshold of what constitues a peak (from 0 to 1). Default = 0.01
     minDist : (optional) minimum distance (Myr) between adjacent peaks. Default = 1
     xdif : (optional) bin size to compute PDP (default = 1 Ma)
-    chartOutput : (optional) set to True to create plots
     x1 : (optional) minimum x-axis value (default = 0 Ma)
     x2 : (optional) maximum x-axis value (default = 4000 Ma)
 
@@ -427,7 +440,7 @@ def tauMethod(ages, errors, min_cluster_size=3, thres=0.01, minDist=1, xdif=1, c
         errors = [errors]
 
     # Calculate the PDP - note that a small xdif may be desired for increased precision
-    PDP_age, PDP = dFunc.PDPcalcAges(ages, errors, xdif)
+    PDP_age, PDP = dFunc.PDPcalcAges(ages, errors, xdif=xdif, x1=x1, x2=x2)
 
     tauMethod = []
     for i in range(len(ages)):  
@@ -436,77 +449,93 @@ def tauMethod(ages, errors, min_cluster_size=3, thres=0.01, minDist=1, xdif=1, c
         peakIndexes = list(peakutils.indexes(PDP[i], thres=thres, min_dist=minDist))
         # Peak ages
         peakAges = PDP_age[peakIndexes]
+
         # Number of grains per peak
-        peakAgeGrain = dFunc.peakAgesGrains([peakAges], [ages[i]], [errors[i]])[0]
+        #peakAgeGrain = dFunc.peakAgesGrains([peakAges], [ages[i]], [errors[i]])[0]
 
         # Calculate trough indexes
         troughIndexes = list(peakutils.indexes(PDP[i]*-1, thres=thres, min_dist=minDist))
         # Trough ages
         troughAges = [0] + list(PDP_age[troughIndexes]) + [4500] # Append a 0 because there is no trough on the young size of the youngest peak and no trough on the old side of the oldest peak
 
-        # Zip peak ages and grains per peak
-        peakAgesGrains = list(zip(peakAges, peakAgeGrain))
-        # Filter out peaks with less than min_cluster_size grains (default is 3, following Barbeau et al., 2009: EPSL)
-        peakAgesGrainsFiltered = list(filter(lambda x: x[1] >= min_cluster_size, peakAgesGrains))
+        # Identify analyses within each peak (trough-to-trough)
+        ages_in_troughs = [] # Will be a list of lists
+        for j in range(len(troughAges)-1):
+            ages_in_troughs.append([x for x in ages[i] if troughAges[j] <= x <= troughAges[j+1]]) # Return ages within each trough
+
+        # Count the number of analyses in eac peak (trough-to-trough)
+        n_per_trough = np.asarray([len(x) for x in ages_in_troughs])
+
+        # Determine the indexes of True values (i.e., peaks with sufficient numbers of analyses)
+        true_indx = [i for i, x in enumerate(n_per_trough >= min_cluster_size) if x] # Returns indexes of True values
 
         # Stop the loop if no peaks are present with the min_cluster_size
-        if peakAgesGrainsFiltered == []:
+        if true_indx == []:
             tauMethod.append([np.nan, np.nan, np.nan, np.nan])
             continue
 
         # Select the nearest trough that is younger than the youngest peak with at least min_cluster_size analyses
-        troughYoung = np.max(list(filter(lambda x: x < peakAgesGrainsFiltered[0][0], troughAges)))
-
-        # Select the nearest trough that is older than the youngest peak with at least min_cluster_size analyses
-        troughOld = np.min(list(filter(lambda x: x > peakAgesGrainsFiltered[0][0], troughAges)))
+        troughYoung = troughAges[true_indx[0]] # Minimum bound
+        troughOld = troughAges[true_indx[0]+1] # Maximum bound
 
         # Select ages and errors that fall between troughYoung and troughOld
         ages_errors1s = list(zip(ages[i], errors[i]))
-        ages_errors1s_filtered = list(filter(lambda x: x[0] < troughOld and x[0] > troughYoung, ages_errors1s))
+        ages_errors1s_filtered = list(filter(lambda x: x[0] <= troughOld and x[0] >= troughYoung, ages_errors1s))
 
         tauMethod_WM, tauMethod_WM_err2s, tauMethod_WM_MSWD = dFunc.weightedMean(np.array([d[0] for d in ages_errors1s_filtered]), np.array([d[1] for d in ages_errors1s_filtered]))
 
         tauMethod.append([tauMethod_WM, tauMethod_WM_err2s, tauMethod_WM_MSWD, len(ages_errors1s_filtered)])
 
-        if chartOutput:
-            fig, ax = plt.subplots(1)
-            # Creates a plot output to check results
-            ax.plot(PDP_age, PDP[i])
-            ax.plot(PDP_age[peakIndexes], PDP[i][peakIndexes],'o')
-            ax.plot(PDP_age[troughIndexes], PDP[i][troughIndexes],'o')
-            ax.plot(tauMethod_WM,0,'s')
-            ax.plot(ages_errors1s_filtered,np.zeros_like(ages_errors1s_filtered),'s')
-            #ax.plot(tauMethod_WM-tauMethod_WM_err2s,0,'s')     
-            ax.set_xlim(0,300)
-
     return tauMethod
 
 ##### Helper Functions #####
 
-def find_youngest_cluster(data_err, min_cluster_size):
+def find_youngest_cluster(data_err, min_cluster_size, sort_by = 'age', contiguous=True):
     """
-    Finds the youngest cluster of analyses that overlap 
+    Finds the youngest cluster of analyses that overlap within uncertainty
+    (updated 6 November 2023)
 
     Parameters
     ----------
     data_err : array of tuples [(age1, error1), (age2, error2), etc.]
+    min_cluster_size : integer, minimum number of analyses in the cluster
+    sort_by : type, options: 'age+error', 'age', or 'none' (default = 'age'). Note: use 'none' if inputting a pre-sorted tuple.
+    contiguous : bool, set to True to require that analyses in a cluster be adjacent (default = True) 
 
     Returns
     -------
-    Array of tuples of youngest cluster of analyses that overlap
-    Number of analyses in the youngest cluster
+    result : array of tuples, youngest ages & errors of analyses that overlap
 
     """
-    i_min = 0
-    i_max = 0
-    for i in range(1, len(data_err)):
-        top = data_err[i_min][0] + data_err[i_min][1]
-        bottom = data_err[i][0] - data_err[i][1]
-        if (top >= bottom):
-            i_max = i
-        elif i_max - i_min + 1 >= min_cluster_size:
-            break
-        else:
-            i_min = i
-            i_max = i
-    return data_err[i_min: i_max + 1] if i_min < i_max else [], i_max
+    
+    if not sort_by in ['age+error','age','none']:
+        print('Warning: options for sort_by kwarg are "age+error" or "age". Results may be incorrect.')
+
+    if sort_by == 'age+error':
+        data_err.sort(key=lambda d: d[0] + d[1]) # Sort based on age + error
+    if sort_by == 'age':
+        data_err.sort(key=lambda d: d[0]) # Sort based on age
+    
+    result = []
+    tops = np.asarray(data_err)[:,0]+np.asarray(data_err)[:,1] # Age plus uncertainty
+    bottoms = np.asarray(data_err)[:,0]-np.asarray(data_err)[:,1] # Age minus uncertainty
+
+    for i in range(len(data_err)): # One loop for each analysis
+        overlaps = bottoms[i:]<tops[i] # Boolean
+        if not contiguous:
+            if sum(overlaps) >= min_cluster_size: # Any analysis, regardless of order
+                result = np.asarray(data_err[i:])[overlaps]
+                break
+        else: 
+            false_indx = [i for i, x in enumerate(overlaps) if not x] # Returns indexes of False values
+            if false_indx == []: # The case of all analyses overlapping or there only being 1 analysis
+                if len(data_err[i:]) >= min_cluster_size: # If all analyses overlap, need to make sure there are enough of them
+                    result = np.asarray(data_err[i:])
+                    break
+                else:
+                    continue # Keep checking until no more analyses to check
+            elif false_indx[0] >= min_cluster_size: # Analyses must be contiguous and overlapping
+                result = np.asarray(data_err[i:(i+false_indx[0])])
+                break
+
+    return result

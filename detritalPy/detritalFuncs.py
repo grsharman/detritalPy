@@ -10,6 +10,7 @@ Created on Sat Feb 18 07:43:18 2017
 # Import required modules
 ###############################################################
 
+import detritalpy.MDAfuncs as MDA
 import numpy as np
 import matplotlib.pyplot as plt
 import pathlib
@@ -2022,42 +2023,13 @@ def MDAtoCSV(sampleList, ages, errors, numGrains, labels, fileName, sortBy, barW
             YSG = data_err1s[0][0]
             YSG_err1s = data_err1s[0][1]
 
-            def find_youngest_cluster_1s(min_cluster_size):
-                i_min = 0
-                i_max = 0
-                for i in range(1, len(data_err1s)):
-                    top = data_err1s[i_min][0] + data_err1s[i_min][1]
-                    bottom = data_err1s[i][0] - data_err1s[i][1]
-                    if (top >= bottom):
-                        i_max = i
-                    elif i_max - i_min + 1 >= min_cluster_size:
-                        break
-                    else:
-                        i_min = i
-                        i_max = i
-                return data_err1s[i_min: i_max + 1] if i_min < i_max else [], i_max
+            YC1s_cluster = MDA.find_youngest_cluster(data_err1s, min_cluster_size=2, sort_by='none', contiguous=True)
+            YC1S_WM = weightedMean(np.array([d[0] for d in YC1s_cluster]), np.array([d[1] for d in YC1s_cluster]))
 
-            def find_youngest_cluster_2s(min_cluster_size):
-                i_min = 0
-                i_max = 0
-                for i in range(1, len(data_err1s)):
-                    top = data_err2s[i_min][0] + data_err2s[i_min][1]
-                    bottom = data_err2s[i][0] - data_err2s[i][1]
-                    if (top >= bottom):
-                        i_max = i
-                    elif i_max - i_min + 1 >= min_cluster_size:
-                        break
-                    else:
-                        i_min = i
-                        i_max = i
-                return data_err2s[i_min: i_max + 1] if i_min < i_max else [], i_max
+            YC2s_cluster = MDA.find_youngest_cluster(data_err2s, min_cluster_size=3, sort_by='none', contiguous=True)
+            YC2S_WM = weightedMean(np.array([d[0] for d in YC2s_cluster]), np.array([d[1] for d in YC2s_cluster])/2.)
 
-            YC1S, YC1S_imax = find_youngest_cluster_1s(2)
-            YC1S_WM = weightedMean(np.array([d[0] for d in YC1S]), np.array([d[1] for d in YC1S]))
-            YC2S, YC2S_imax = find_youngest_cluster_2s(3)
-            YC2S_WM = weightedMean(np.array([d[0] for d in YC2S]), np.array([d[1] for d in YC2S])/2)
-
-            writer.writerow((labels[i],numGrains[i], YSG, YSG_err1s, YC1S_WM[0], YC1S_WM[1]/2, YC1S_WM[2], len(YC1S), YC2S_WM[0], YC2S_WM[1]/2, YC2S_WM[2], len(YC2S)))
+            writer.writerow((labels[i],numGrains[i], YSG, YSG_err1s, YC1S_WM[0], YC1S_WM[1]/2, YC1S_WM[2], len(YC1s_cluster), YC2S_WM[0], YC2S_WM[1]/2, YC2S_WM[2], len(YC2s_cluster)))
             
             if makePlot:
                 # Specify plot characteristics and axes    
@@ -2078,8 +2050,10 @@ def MDAtoCSV(sampleList, ages, errors, numGrains, labels, fileName, sortBy, barW
                 
                 # Determine how many grains to plot per sample or sample group
                 toPlot = np.zeros_like(np.empty(shape=(len(ageErrors),1)))
-                YC1S_max = data_err1s[YC1S_imax][0]+data_err1s[YC1S_imax][1]
-                YC2S_max = data_err2s[YC2S_imax][0]+data_err2s[YC2S_imax][1]
+                YC1S_max = YC1s_cluster[-1][0] + YC1s_cluster[-1][1]
+                YC2S_max = YC2s_cluster[-1][0] + YC2s_cluster[-1][1] 
+                # YC1S_max = data_err1s[YC1S_imax][0]+data_err1s[YC1S_imax][1]
+                # YC2S_max = data_err2s[YC2S_imax][0]+data_err2s[YC2S_imax][1]
                 if YC1S_max >= YC2S_max:
                     plotMax = YC1S_max
                 else:
@@ -3866,39 +3840,10 @@ def calcMDA(ages, errors):
         YSG = data_err1s[0][0]
         YSG_err1s = data_err1s[0][1]
 
-        def find_youngest_cluster_1s(min_cluster_size):
-            i_min = 0
-            i_max = 0
-            for i in range(1, len(data_err1s)):
-                top = data_err1s[i_min][0] + data_err1s[i_min][1]
-                bottom = data_err1s[i][0] - data_err1s[i][1]
-                if (top >= bottom):
-                    i_max = i
-                elif i_max - i_min + 1 >= min_cluster_size:
-                    break
-                else:
-                    i_min = i
-                    i_max = i
-            return data_err1s[i_min: i_max + 1] if i_min < i_max else [], i_max
+        YC1s_cluster = MDA.find_youngest_cluster(data_err1s, min_cluster_size=2, sort_by='none', contiguous=True)
+        YC1S_WM = weightedMean(np.array([d[0] for d in YC1s_cluster]), np.array([d[1] for d in YC1s_cluster]))
 
-        def find_youngest_cluster_2s(min_cluster_size):
-            i_min = 0
-            i_max = 0
-            for i in range(1, len(data_err1s)):
-                top = data_err2s[i_min][0] + data_err2s[i_min][1]
-                bottom = data_err2s[i][0] - data_err2s[i][1]
-                if (top >= bottom):
-                    i_max = i
-                elif i_max - i_min + 1 >= min_cluster_size:
-                    break
-                else:
-                    i_min = i
-                    i_max = i
-            return data_err2s[i_min: i_max + 1] if i_min < i_max else [], i_max
+        YC2s_cluster = MDA.find_youngest_cluster(data_err2s, min_cluster_size=3, sort_by='none', contiguous=True)
+        YC2S_WM = weightedMean(np.array([d[0] for d in YC2s_cluster]), np.array([d[1] for d in YC2s_cluster])/2.)
 
-        YC1S, YC1S_imax = find_youngest_cluster_1s(2)
-        YC1S_WM = weightedMean(np.array([d[0] for d in YC1S]), np.array([d[1] for d in YC1S]))
-        YC2S, YC2S_imax = find_youngest_cluster_2s(3)
-        YC2S_WM = weightedMean(np.array([d[0] for d in YC2S]), np.array([d[1] for d in YC2S])/2)
-
-    return YSG, YSG_err1s, YC1S_WM[0], YC1S_WM[1]/2, YC1S_WM[2], len(YC1S), YC2S_WM[0], YC2S_WM[1]/2, YC2S_WM[2], len(YC2S)
+    return YSG, YSG_err1s, YC1S_WM[0], YC1S_WM[1]/2, YC1S_WM[2], len(YC1s_cluster), YC2S_WM[0], YC2S_WM[1]/2, YC2S_WM[2], len(YC2s_cluster)
