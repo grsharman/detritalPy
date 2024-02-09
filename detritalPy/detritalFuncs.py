@@ -15,6 +15,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pathlib
 import pandas as pd
+from scipy.interpolate import interp1d
 
 # Allows font to be preserved opening in Adobe Illustrator
 import matplotlib 
@@ -441,100 +442,91 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
             'size'   : 14}
     plt.rc('font', **font)
 
-    # Sets the matplotlib figure and axes structure
+    if type(w) == int: # Make w into list if supplied as int
+        w = [1,w-1]
+
+    if isinstance(x1, list):
+        split_axis = True
+    else:
+        split_axis = False
+
+    if whatToPlot == 'relative':
+        c = 0
+
+    if (plotLog & split_axis):
+        print('Warning: The x-axis may not be plotted in log scale while using a split axis')
+        return None
+
+
+    # Sets up the matplotlib figure and axes structure (new as of v1.4.0)
+    mosaic = []
+    if (whatToPlot == 'cumulative' or whatToPlot == 'both'):
+        for i in range(c): # Split axis
+            mosaic_line = ['0,0']
+            for j in range(len(w)-1):
+                value = '0,{}'.format(j+1)
+                mosaic_line = mosaic_line + [value]*(w[j+1])
+            mosaic.append(mosaic_line)
+            
+    if (whatToPlot == 'relative' or whatToPlot == 'both'):
+        for i in range(n): # One loop for each row
+            mosaic_line = ['{},0'.format(i+1)] # Pie plot
+            for j in range(len(w)-1): # Split axis
+                value = '{},{}'.format(i+1, j+1)
+                mosaic_line = mosaic_line + [value]*(w[j+1])
+            mosaic.append(mosaic_line)
+
+    if (whatToPlot == 'relative' or whatToPlot == 'both'):
+        fig = plt.figure(figsize=(np.sum(w),n+c))
     if whatToPlot == 'cumulative':
-        if isinstance(x1, list) == False: # If split axis is not used
-            fig, axs = plt.subplots(c,w, figsize=(w,c))
-            axs[0,0] = plt.subplot2grid((c,w),(0,0),rowspan=c) # empty subplot
-            axs[0,0].axis('off') # delete axis from empty subplot
-            axs[0,1] = plt.subplot2grid((c,w),(0,1),rowspan=c,colspan=w-1) # panel for CDF plot
-            if plotLog:
-                axs[0,0].set_xscale('log')
-                axs[0,1].set_xscale('log')
-        else: # If split axis is used
-            fig, axs = plt.subplots(c,np.sum(w), figsize=(np.sum(w),c))
-            axs[0,0] = plt.subplot2grid((c,np.sum(w)),(0,0),rowspan=c,colspan=w[0]) # empty subplot
-            axs[0,0].axis('off') # delete axis from empty subplot
-            for i in range(len(w)-1):
-                axs[0,i+1] = plt.subplot2grid((c,np.sum(w)),(0,int(np.sum(w[:(i+1)]))),rowspan=c,colspan=w[i+1]) # panel for CDF plot
-                axs[0,i+1].set_yticklabels([])
-
-    if (whatToPlot == 'both' or whatToPlot == 'relative'):
-        if whatToPlot == 'relative':
-            c = 0
-        if (n == 1 and whatToPlot == 'relative'):
-            c = c+1 # To avoid an index error when only one sample or sample group is plotted
-        
-        if isinstance(x1, list) == False: # If split axis is not used
-            fig, axs = plt.subplots(n+c,w, figsize=(w,n+c))
-            if c > 0:
-                axs[0,0] = plt.subplot2grid((n+c,w),(0,0),rowspan=c) # empty subplot
-                axs[0,1] = plt.subplot2grid((n+c,w),(0,1),rowspan=c,colspan=w-1) # panel for CDF plot
-            if c == 0:
-                axs[0,0] = plt.subplot2grid((n,w),(0,0)) # empty subplot
-                axs[0,1] = plt.subplot2grid((n,w),(0,1),colspan=w-1)
-            axs[0,0].axis('off') # delete axis from empty subplot
-            axs[0,1].get_xaxis().set_ticks([])
-            axs[0,1].tick_params(direction='out')
-            axs[0,1].yaxis.set_ticks_position('left')
-            if plotLog: # Log plot only available with non-split axis
-                axs[0,0].set_xscale('log')
-                axs[0,1].set_xscale('log')
-            if (n == 1 and whatToPlot == 'relative'):
-                axs[0,1].axis('off') # Hide this axis if n = 1
-            for i in range(n):
-                axs[c+i,0] = plt.subplot2grid((n+c,w),(c+i,0)) # subplots for pie plots
-                axs[c+i,0].get_xaxis().set_ticks([])
-                axs[c+i,0].get_yaxis().set_ticks([])
-                if not plotPIE:
-                    axs[c+i,0].axis('off') # delete axis from pie subplot if pies not plotted
-                axs[c+i,1] = plt.subplot2grid((n+c,w),(c+i,1),colspan=w-1) # subplots for KDE plots
-                axs[c+i,1].get_yaxis().set_ticks([])
-                if i<n-1: # This insures that only the last plot will have an x-axis
-                    axs[c+i,1].get_xaxis().set_ticks([])
-                    if plotLog:
-                        axs[c+i, 1].set_xscale('log')
-                else:
-                    axs[c+i,1].tick_params(direction='out')
-                    axs[c+i,1].xaxis.set_ticks_position('bottom')
-                    axs[c+i,1].set_xlabel('Age (Ma)')
-                    if plotLog:
-                        axs[c+i, 1].set_xscale('log')
-
-        else: # If split axis is used
-            fig, axs = plt.subplots(n+c,np.sum(w), figsize=(np.sum(w),n+c))
-            if c > 0:
-                axs[0,0] = plt.subplot2grid((n+c,np.sum(w)),(0,0),rowspan=c,colspan=w[0]) # empty subplot
-                axs[0,0].axis('off') # delete axis from empty subplot
-                for i in range(len(w)-1):
-                    axs[0,i+1] = plt.subplot2grid((n+c,np.sum(w)),(0,int(np.sum(w[:(i+1)]))),rowspan=c,colspan=w[i+1]) # panel for CDF plot
-                    axs[0,i+1].set_yticklabels([])
-            #if c == 0:
-                #axs[0,0] = plt.subplot2grid((n,np.sum(w)),(0,0)) # empty subplot
-                #axs[0,0].axis('off') # delete axis from empty subplot
-                #for i in range(len(w)-1):
-                #    axs[0,i+1] = plt.subplot2grid((n,np.sum(w)),(0,int(np.sum(w[:(i+1)]))),colspan=np.sum(w[1:]))                
-            if (n == 1 and whatToPlot == 'relative'):
-                for i in range(len(w)-1):
-                    axs[0,i+1].axis('off') # Hide this axis if n = 1
-            for i in range(n):
-                axs[c+i,0] = plt.subplot2grid((n+c,np.sum(w)),(c+i,0)) # subplots for pie plots
-                axs[c+i,0].get_xaxis().set_ticks([])
-                axs[c+i,0].get_yaxis().set_ticks([])
-                if not plotPIE:
-                    axs[c+i,0].axis('off') # delete axis from pie subplot if pies not plotted
-                for j in range(len(w)-1):
-                    axs[c+i,j+1] = plt.subplot2grid((n+c,np.sum(w)),(c+i,int(np.sum(w[:(j+1)]))),colspan=w[j+1]) # subplots for KDE plots
-                    axs[c+i,j+1].get_yaxis().set_ticks([])
-                    if i<n-1: # This insures that only the bottom plots will have an x-axis
-                        axs[c+i,j+1].get_xaxis().set_ticks([])
-                    else:
-                        axs[c+i,j+1].tick_params(direction='out')
-                        axs[c+i,j+1].xaxis.set_ticks_position('bottom')
-                        #axs[c+i,j+1].set_xlabel('Age (Ma)')
-
+        fig = plt.figure(figsize=(np.sum(w),c))
+    axs = fig.subplot_mosaic(mosaic)
     fig.subplots_adjust(wspace=0)
     fig.subplots_adjust(hspace=0)
+
+
+    # Adjust axes parameters (new as of v1.4.0)
+    if whatToPlot == 'cumulative':
+        axs['0,0'].axis('off') # Turn off upper left axis
+        if not split_axis:
+            if plotLog:
+                axs['0,1'].set_xscale('log') # Cumulative plot
+        else:
+            for i in range(1,len(w)-1):
+                axs['0,{}'.format(i+1)].set_yticklabels([])
+
+    if (whatToPlot == 'both' or whatToPlot == 'relative'):
+        if whatToPlot == 'both':
+            axs['0,0'].axis('off') # Turn off upper left axis
+        # Pie plots
+        for h in range(n):
+            if plotPIE:
+                axs['{},0'.format(h+1)].get_xaxis().set_ticks([]) # Pies
+                axs['{},0'.format(h+1)].get_yaxis().set_ticks([]) # Pies
+            else:
+                axs['{},0'.format(h+1)].set_axis_off()
+        for h in range(len(w)-1): # One loop per x-axis
+            if whatToPlot == 'both':
+            # Cumulative plot parameters
+                axs['0,{}'.format(h+1)].get_xaxis().set_ticks([])
+                axs['0,{}'.format(h+1)].tick_params(direction='out')
+                axs['0,{}'.format(h+1)].yaxis.set_ticks_position('left')
+                if h > 0: # Remove labels from plots other than leftmost
+                    axs['0,{}'.format(h+1)].get_yaxis().set_ticks([])
+                if plotLog:
+                    if not split_axis:
+                        axs['0,{}'.format(h+1)].set_xscale('log') # Cumulative plot
+            for i in range(n): # One loop per sample
+                axs['{},{}'.format(i+1,h+1)].get_yaxis().set_ticks([])
+                if plotLog:
+                    if not split_axis:
+                        axs['{},{}'.format(i+1,h+1)].set_xscale('log')
+                if i < n-1: # This insures that only the last plot will have an x-axis
+                    axs['{},{}'.format(i+1,h+1)].get_xaxis().set_ticks([])
+                else:
+                    axs['{},{}'.format(i+1,h+1)].tick_params(direction='out')
+                    axs['{},{}'.format(i+1,h+1)].xaxis.set_ticks_position('bottom')
+                    axs['{},{}'.format(i+1,h+1)].set_xlabel('Age (Ma)')   
 
     # Figure out how many split axes to use
     if isinstance(x1, list) == False:
@@ -593,74 +585,74 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
             if plotCDF:
                 CDF_age, CDF = CDFcalcAges(ages=ages, x1=0, x2=4500, xdif=xdif)
                 for i in range(len(sampleList)):
-                    axs[0,h+1].plot(CDF_age, CDF[i], color=colorMe(i, colors), alpha=1, lw=CDFlw, label=labels[i]+(', N=(%d' % N[i])+(', %d' % numGrainsPlotted[i])+('/%d' % numGrains[i])+(')'))
+                    axs['0,{}'.format(h+1)].plot(CDF_age, CDF[i], color=colorMe(i, colors), alpha=1, lw=CDFlw, label=labels[i]+(', N=(%d' % N[i])+(', %d' % numGrainsPlotted[i])+('/%d' % numGrains[i])+(')'))
                     if plotDKW:
                         DFWmin, DFWmax = calcDFW(CDF[i], epsilon[i])
-                        axs[0,h+1].plot(CDF_age, DFWmax, '--', color=colorMe(i, colors))
-                        axs[0,h+1].plot(CDF_age, DFWmin, '--', color=colorMe(i, colors))
-                        axs[0,h+1].fill_between(CDF_age, DFWmax, DFWmin, color=colorMe(i, colors), alpha = 0.5)
+                        axs['0,{}'.format(h+1)].plot(CDF_age, DFWmax, '--', color=colorMe(i, colors))
+                        axs['0,{}'.format(h+1)].plot(CDF_age, DFWmin, '--', color=colorMe(i, colors))
+                        axs['0,{}'.format(h+1)].fill_between(CDF_age, DFWmax, DFWmin, color=colorMe(i, colors), alpha = 0.5)
                     if plotAgesOnCDF:
                         agesErrorsSort = pd.DataFrame({'Ages' : ages[i],'Errors' : errors[i]})
                         agesErrorsSort = agesErrorsSort.sort_values(by=['Ages'])
                         agesErrorsSortY = np.arange(0,1.,1/len(agesErrorsSort['Ages']))
-                        axs[0,h+1].errorbar(x=agesErrorsSort['Ages'], y=agesErrorsSortY, xerr=agesErrorsSort['Errors'],linestyle='',marker='o',ecolor='black',capsize=2,markerfacecolor=colorMe(i, colors),markeredgecolor='black')        # Need to add functionality to additional options below
+                        axs['0,{}'.format(h+1)].errorbar(x=agesErrorsSort['Ages'], y=agesErrorsSortY, xerr=agesErrorsSort['Errors'],linestyle='',marker='o',ecolor='black',capsize=2,markerfacecolor=colorMe(i, colors),markeredgecolor='black')        # Need to add functionality to additional options below
             if plotCPDP:
                 CPDP_age, CPDP = PDPcalcAges(ages=ages, errors=errors, x1=0, x2=4500, xdif=xdif, cumulative=True)        
                 for i in range(len(sampleList)):
-                    axs[0,h+1].plot(CPDP_age, CPDP[i], color=colorMe(i, colors), alpha=1, lw=CDFlw, label=labels[i]+(', N=(%d' % N[i])+(', %d' % numGrainsPlotted[i])+('/%d' % numGrains[i])+(')'))
+                    axs['0,{}'.format(h+1)].plot(CPDP_age, CPDP[i], color=colorMe(i, colors), alpha=1, lw=CDFlw, label=labels[i]+(', N=(%d' % N[i])+(', %d' % numGrainsPlotted[i])+('/%d' % numGrains[i])+(')'))
                     if plotDKW:
                         DFWmin, DFWmax = calcDFW(CPDP[i], epsilon[i])
-                        axs[0,h+1].plot(CPDP_age, DFWmax, '--', color=colorMe(i, colors))
-                        axs[0,h+1].plot(CPDP_age, DFWmin, '--', color=colorMe(i, colors))
-                        axs[0,h+1].fill_between(CPDP_age, DFWmax, DFWmin, color=colorMe(i, colors), alpha = 0.5)
+                        axs['0,{}'.format(h+1)].plot(CPDP_age, DFWmax, '--', color=colorMe(i, colors))
+                        axs['0,{}'.format(h+1)].plot(CPDP_age, DFWmin, '--', color=colorMe(i, colors))
+                        axs['0,{}'.format(h+1)].fill_between(CPDP_age, DFWmax, DFWmin, color=colorMe(i, colors), alpha = 0.5)
                     if plotAgesOnCDF:
                         agesErrorsSort = pd.DataFrame({'Ages' : ages[i],'Errors' : errors[i]})
                         agesErrorsSort = agesErrorsSort.sort_values(by=['Ages'])
                         agesErrorsSortY = np.arange(0,1.,1/len(agesErrorsSort['Ages']))
-                        axs[0,h+1].errorbar(x=agesErrorsSort['Ages'], y=agesErrorsSortY, xerr=agesErrorsSort['Errors'],linestyle='',marker='o',ecolor='black',capsize=2,markerfacecolor=colorMe(i, colors),markeredgecolor='black')
+                        axs['0,{}'.format(h+1)].errorbar(x=agesErrorsSort['Ages'], y=agesErrorsSortY, xerr=agesErrorsSort['Errors'],linestyle='',marker='o',ecolor='black',capsize=2,markerfacecolor=colorMe(i, colors),markeredgecolor='black')
             if plotCKDE:
                 CKDE_age, CKDE = KDEcalcAges(ages=ages, x1=0, x2=4500, xdif=xdif, bw=bw, bw_x=bw_x, cumulative=True)             
                 for i in range(len(sampleList)):
-                    axs[0,h+1].plot(CKDE_age, CKDE[i], color=colorMe(i, colors), alpha=1, lw=CDFlw, label=labels[i]+(', N=(%d' % N[i])+(', %d' % numGrainsPlotted[i])+('/%d' % numGrains[i])+(')'))
+                    axs['0,{}'.format(h+1)].plot(CKDE_age, CKDE[i], color=colorMe(i, colors), alpha=1, lw=CDFlw, label=labels[i]+(', N=(%d' % N[i])+(', %d' % numGrainsPlotted[i])+('/%d' % numGrains[i])+(')'))
                     if plotDKW:
                         DFWmin, DFWmax = calcDFW(CKDE[i], epsilon[i])
-                        axs[0,h+1].plot(CKDE_age, DFWmax, '--', color=colorMe(i, colors))
-                        axs[0,h+1].plot(CKDE_age, DFWmin, '--', color=colorMe(i, colors))
-                        axs[0,h+1].fill_between(CKDE_age, DFWmax, DFWmin, color=colorMe(i, colors), alpha = 0.5)
+                        axs['0,{}'.format(h+1)].plot(CKDE_age, DFWmax, '--', color=colorMe(i, colors))
+                        axs['0,{}'.format(h+1)].plot(CKDE_age, DFWmin, '--', color=colorMe(i, colors))
+                        axs['0,{}'.format(h+1)].fill_between(CKDE_age, DFWmax, DFWmin, color=colorMe(i, colors), alpha = 0.5)
                     if plotAgesOnCDF:
                         agesErrorsSort = pd.DataFrame({'Ages' : ages[i],'Errors' : errors[i]})
                         agesErrorsSort = agesErrorsSort.sort_values(by=['Ages'])
                         agesErrorsSortY = np.arange(0,1.,1/len(agesErrorsSort['Ages']))
-                        axs[0,h+1].errorbar(x=agesErrorsSort['Ages'], y=agesErrorsSortY, xerr=agesErrorsSort['Errors'],linestyle='',marker='o',ecolor='black',capsize=2,markerfacecolor=colorMe(i, colors),markeredgecolor='black')
+                        axs['0,{}'.format(h+1)].errorbar(x=agesErrorsSort['Ages'], y=agesErrorsSortY, xerr=agesErrorsSort['Errors'],linestyle='',marker='o',ecolor='black',capsize=2,markerfacecolor=colorMe(i, colors),markeredgecolor='black')
             if h == 0: # Only plot the y-axis for the leftmost plot
-                axs[0,h+1].set_ylabel("Cumulative Distribution")
+                axs['0,{}'.format(h+1)].set_ylabel("Cumulative Distribution")
             if h == loops-1: # Only plot legend for rightmost plot
-                axs[0,h+1].legend(loc="lower right", prop={'size':8})
+                axs['0,{}'.format(h+1)].legend(loc="lower right", prop={'size':8})
             if isinstance(x1, list) == False:
-                axs[0,h+1].set_xlim(x1, x2)
+                axs['0,{}'.format(h+1)].set_xlim(x1, x2)
             else:
-                axs[0,h+1].set_xlim(x1[h], x2[h])
-            axs[0,h+1].set_ylim(0, 1.)
+                axs['0,{}'.format(h+1)].set_xlim(x1[h], x2[h])
+            axs['0,{}'.format(h+1)].set_ylim(0, 1.)
             if whatToPlot == 'both':
-                axs[0,h+1].get_xaxis().set_ticks([])
-                axs[0,h+1].get_yaxis().set_visible(True)
+                axs['0,{}'.format(h+1)].get_xaxis().set_ticks([])
+                axs['0,{}'.format(h+1)].get_yaxis().set_visible(True)
             else:
-                axs[0,h+1].set_xlabel('Age (Ma)')
+                axs['0,{}'.format(h+1)].set_xlabel('Age (Ma)')
             if plotColorBar:
                 if len(np.shape(agebins)) == 1:
                     for j in range(nage):
-                        axs[0,h+1].axvspan(xmin=agebins[j],xmax=agebins[j+1], color = agebinsc[j], alpha = agebinsc_alpha[j])
+                        axs['0,{}'.format(h+1)].axvspan(xmin=agebins[j],xmax=agebins[j+1], color = agebinsc[j], alpha = agebinsc_alpha[j])
                 if len(np.shape(agebins)) == 2:
                     for j in range(len(agebins)):
-                        axs[0,h+1].axvspan(xmin=agebins[j][0],xmax=agebins[j][1], color = agebinsc[j], alpha = agebinsc_alpha[j])
+                        axs['0,{}'.format(h+1)].axvspan(xmin=agebins[j][0],xmax=agebins[j][1], color = agebinsc[j], alpha = agebinsc_alpha[j])
 
             # Plot depositional age as a vertical line, if selected
             if plotDepoAge:
                 if len(depoAge) == 1:
-                    axs[0,h+1].axvline(x=depoAge, color='darkred')
+                    axs['0,{}'.format(h+1)].axvline(x=depoAge, color='darkred')
                 else:
                     for i in range(len(depoAge)):
-                        axs[0,h+1].axvline(x=depoAge[i], color=colorMe(i, colors))       
+                        axs['0,{}'.format(h+1)].axvline(x=depoAge[i], color=colorMe(i, colors))       
     
         # Plot the relative distribution (PDP and/or KDE)
         if (whatToPlot == 'both' or whatToPlot == 'relative'):
@@ -685,7 +677,7 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                             axHeat.imshow([dist[i]], aspect='auto', cmap=heatMap, interpolation='none', extent=[x1[h]-xdif*0.5, x2[h]-xdif*0.5, 0, 1])
 
                 if plotKDE:
-                    axKDE = axs[c+i,h+1].twinx()
+                    axKDE = axs['{},{}'.format(i+1,h+1)].twinx() # axs[c+i,h+1]
                     # Plot depositional age as a vertical line, if selected                
                     if plotDepoAge:
                         if len(depoAge) == 1:
@@ -757,7 +749,7 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
         
                 # PDP plot
                 if plotPDP:
-                    axPDP = axs[c+i,h+1].twinx() # to allow the PDP to plot on a different scale
+                    axPDP = axs['{},{}'.format(i+1,h+1)].twinx() # to allow the PDP to plot on a different scale
                     # Plot depositional age as a vertical line, if selected                
                     if plotDepoAge:
                         if len(depoAge) == 1:
@@ -844,13 +836,13 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                     
                 # Histogram plot
                 if plotHist:
-                    axHist = axs[c+i,h+1].twinx() # to allow the histogram to plot on a different scale
+                    axHist = axs['{},{}'.format(i+1,h+1)].twinx() # to allow the histogram to plot on a different scale
                     # Plot depositional age as a vertical line, if selected                
                     if plotDepoAge:
                         if len(depoAge) == 1:
-                            axs[c+i,h+1].axvline(x=depoAge, color='darkred')
+                            axs['{},{}'.format(i+1,h+1)].axvline(x=depoAge, color='darkred')
                         else:
-                            axs[c+i,h+1].axvline(x=depoAge[i], color=colorMe(i, colors))
+                            axs['{},{}'.format(i+1,h+1)].axvline(x=depoAge[i], color=colorMe(i, colors))
                     if isinstance(x1, list) == False:
                         bin_array = np.arange(x1, x2+xdif, b)
                         axHist.hist(ages[i], bins=bin_array, color='black', fill=None, alpha=1, histtype='bar', density=False)
@@ -880,7 +872,7 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                         hist = []
                         for j in range(len(agebins)):
                             hist.append(np.histogram(ages[i],agebins[j])[0][0])
-                    pie = axs[c+i,0].pie(hist, colors=agebinsc, startangle=90, counterclock=False, radius=0.75)
+                    pie = axs['{},{}'.format(i+1,0)].pie(hist, colors=agebinsc, startangle=90, counterclock=False, radius=0.75)
                     for j in range(len(pie[0])):
                         pie[0][j].set_alpha(agebinsc_alpha[j])
                 
@@ -888,13 +880,13 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                 if plotColorBar:
                     if len(np.shape(agebins)) == 1:
                         for j in range(nage):
-                            axs[c+i,h+1].axvspan(xmin=agebins[j],xmax=agebins[j+1], color = agebinsc[j], alpha = agebinsc_alpha[j])
+                            axs['{},{}'.format(i+1,h+1)].axvspan(xmin=agebins[j],xmax=agebins[j+1], color = agebinsc[j], alpha = agebinsc_alpha[j])
                     if len(np.shape(agebins)) == 2:
                         for j in range(len(agebins)):
-                            axs[c+i,h+1].axvspan(xmin=agebins[j][0],xmax=agebins[j][1], color = agebinsc[j], alpha = agebinsc_alpha[j])
+                            axs['{},{}'.format(i+1,h+1)].axvspan(xmin=agebins[j][0],xmax=agebins[j][1], color = agebinsc[j], alpha = agebinsc_alpha[j])
 
-    if type(x1) != int:
-        fig.suptitle('Age (Ma)', x=0.5, y=0.07) # Add label to bottom of figure (it's positioning needs some work . . . )
+ #   if type(x1) != int:
+ #       fig.suptitle('Age (Ma)', x=0.5, y=0.07) # Add label to bottom of figure (it's positioning needs some work . . . )
         
     return fig
 
@@ -940,40 +932,33 @@ def plotAll_2(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
             'size'   : 14}
     plt.rc('font', **font)
 
-    # Sets the matplotlib figure and axes structure
+    # Sets the matplotlib figure and axes structure (new in v1.4.0)
     if whatToPlot == 'cumulative':
-        fig, axs = plt.subplots(c,w, figsize=(w,c))
-        axs[0,0] = plt.subplot2grid((c,w),(0,0),rowspan=c,colspan=w) # panel for CDF plot
+        fig, ax1 = plt.subplots(1, figsize=(w,c))
         if plotLog:
-            axs[0,0].set_xscale('log')
-    if (whatToPlot == 'both' or whatToPlot == 'relative'):
-        if whatToPlot == 'relative':
-            c = 0
-        if (n == 1 and whatToPlot == 'relative'):
-            c = c+1 # To avoid an index error when only one sample or sample group is plotted            
-        fig, axs = plt.subplots(h+c,w, figsize=(w+2,h+c))
-        if c > 0:
-            axs[0,0] = plt.subplot2grid((h+c,w),(0,0),rowspan=c,colspan=w) # panel for CDF plot
-        if c == 0:
-            axs[0,0] = plt.subplot2grid((h,w),(0,0),colspan=w)
-        axs[0,0].get_xaxis().set_ticks([])
-        axs[0,0].tick_params(direction='out')
-        axs[0,0].yaxis.set_ticks_position('left')
-        axs[0,0].set_xlim(x1,x2)
+            ax1.set_xscale('log')
+
+    if whatToPlot == 'both':
+        fig, [ax1, ax2] = plt.subplots(2,1, figsize=(w, h+c), height_ratios=[c,h])
+        ax1.get_xaxis().set_ticks([])
+        ax1.tick_params(direction='out')
+        ax1.yaxis.set_ticks_position('left')
+        ax1.set_xlim(x1,x2)
+        ax2.get_yaxis().set_ticks([])
+        ax2.tick_params(direction='out')
+        ax2.xaxis.set_ticks_position('bottom')
+        ax2.set_xlabel('Age (Ma)')
         if plotLog:
-            axs[0,0].set_xscale('log')
-        if (n == 1 and whatToPlot == 'relative'):
-            axs[0,0].axis('off')
-        axs[c,0] = plt.subplot2grid((h+c,w),(c,0),rowspan=h,colspan=w) # panel for the relative plot
-        axs[c,0].get_yaxis().set_ticks([])
-        axs[c,0].tick_params(direction='out')
-        axs[c,0].xaxis.set_ticks_position('bottom')
-        axs[c,0].set_xlabel('Age (Ma)')
-        if plotLog:
-            axs[c,0].set_xscale('log')
+            ax1.set_xscale('log')
+            ax2.set_xscale('log')
         fig.subplots_adjust(wspace=0)
-        fig.subplots_adjust(hspace=0)        
+        fig.subplots_adjust(hspace=0)
         
+    if whatToPlot == 'relative':
+        fig, ax2 = plt.subplots(1, figsize=(w,h))
+        if plotLog:
+            ax2.set_xscale('log')
+            
     # Plot the cumulative distribution
     if (whatToPlot == 'cumulative' or whatToPlot == 'both'):
         if plotDKW: # Calculate the Kvoretsky-Kiefer-Wolfowitz inequality following Anderson et al. (2018): Basin Research
@@ -984,61 +969,61 @@ def plotAll_2(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
         if plotCDF:
             CDF_age, CDF = CDFcalcAges(ages=ages, x1=0, x2=4500, xdif=xdif)
             for i in range(len(sampleList)):
-                axs[0,0].plot(CDF_age, CDF[i], color=colorMe(i, colors), alpha=1, lw=CDFlw, label=str(labels[i])+(', N=(%d' % N[i])+(', %d' % numGrainsPlotted[i])+('/%d' % numGrains[i])+(')'))
+                ax1.plot(CDF_age, CDF[i], color=colorMe(i, colors), alpha=1, lw=CDFlw, label=str(labels[i])+(', N=(%d' % N[i])+(', %d' % numGrainsPlotted[i])+('/%d' % numGrains[i])+(')'))
                 if plotDKW:
                     DFWmin, DFWmax = calcDFW(CDF[i], epsilon[i])
-                    axs[0,0].plot(CDF_age, DFWmax, '--', color=colorMe(i, colors))
-                    axs[0,0].plot(CDF_age, DFWmin, '--', color=colorMe(i, colors))
-                    axs[0,0].fill_between(CDF_age, DFWmax, DFWmin, color=colorMe(i, colors), alpha = 0.5)
+                    ax1.plot(CDF_age, DFWmax, '--', color=colorMe(i, colors))
+                    ax1.plot(CDF_age, DFWmin, '--', color=colorMe(i, colors))
+                    ax1.fill_between(CDF_age, DFWmax, DFWmin, color=colorMe(i, colors), alpha = 0.5)
                 if plotAgesOnCDF:
                     agesErrorsSort = pd.DataFrame({'Ages' : ages[i],'Errors' : errors[i]})
                     agesErrorsSort = agesErrorsSort.sort_values(by=['Ages'])
                     agesErrorsSortY = np.arange(0,1.,1/len(agesErrorsSort['Ages']))
-                    axs[0,0].errorbar(x=agesErrorsSort['Ages'], y=agesErrorsSortY, xerr=agesErrorsSort['Errors'],linestyle='',marker='o',ecolor='black',capsize=2,markerfacecolor=colorMe(i, colors),markeredgecolor='black')
+                    ax1.errorbar(x=agesErrorsSort['Ages'], y=agesErrorsSortY, xerr=agesErrorsSort['Errors'],linestyle='',marker='o',ecolor='black',capsize=2,markerfacecolor=colorMe(i, colors),markeredgecolor='black')
         if plotCPDP:
             CPDP_age, CPDP = PDPcalcAges(ages=ages, errors=errors, x1=0, x2=4500, xdif=xdif, cumulative=True)        
             for i in range(len(sampleList)):
-                axs[0,0].plot(CPDP_age, CPDP[i], color=colorMe(i, colors), alpha=1, lw=CDFlw, label=str(labels[i])+(', N=(%d' % N[i])+(', %d' % numGrainsPlotted[i])+('/%d' % numGrains[i])+(')'))
+                ax1.plot(CPDP_age, CPDP[i], color=colorMe(i, colors), alpha=1, lw=CDFlw, label=str(labels[i])+(', N=(%d' % N[i])+(', %d' % numGrainsPlotted[i])+('/%d' % numGrains[i])+(')'))
                 if plotDKW:
                     DFWmin, DFWmax = calcDFW(CPDP[i], epsilon[i])
-                    axs[0,0].plot(CPDP_age, DFWmax, '--', color=colorMe(i, colors))
-                    axs[0,0].plot(CPDP_age, DFWmin, '--', color=colorMe(i, colors))
-                    axs[0,0].fill_between(CPDP_age, DFWmax, DFWmin, color=colorMe(i, colors), alpha = 0.5)
+                    ax1.plot(CPDP_age, DFWmax, '--', color=colorMe(i, colors))
+                    ax1.plot(CPDP_age, DFWmin, '--', color=colorMe(i, colors))
+                    ax1.fill_between(CPDP_age, DFWmax, DFWmin, color=colorMe(i, colors), alpha = 0.5)
                 if plotAgesOnCDF:
                     agesErrorsSort = pd.DataFrame({'Ages' : ages[i],'Errors' : errors[i]})
                     agesErrorsSort = agesErrorsSort.sort_values(by=['Ages'])
                     agesErrorsSortY = np.arange(0,1.,1/len(agesErrorsSort['Ages']))
-                    axs[0,0].errorbar(x=agesErrorsSort['Ages'], y=agesErrorsSortY, xerr=agesErrorsSort['Errors'],linestyle='',marker='o',ecolor='black',capsize=2,markerfacecolor=colorMe(i, colors),markeredgecolor='black')
+                    ax1.errorbar(x=agesErrorsSort['Ages'], y=agesErrorsSortY, xerr=agesErrorsSort['Errors'],linestyle='',marker='o',ecolor='black',capsize=2,markerfacecolor=colorMe(i, colors),markeredgecolor='black')
         if plotCKDE:
             CKDE_age, CKDE = KDEcalcAges(ages=ages, x1=0, x2=4500, xdif=xdif, bw=bw, bw_x=bw_x, cumulative=True)
             for i in range(len(sampleList)):
-                axs[0,0].plot(CKDE_age, CKDE[i], color=colorMe(i, colors), alpha=1, lw=CDFlw, label=str(labels[i])+(', N=(%d' % N[i])+(', %d' % numGrainsPlotted[i])+('/%d' % numGrains[i])+(')'))
+                ax1.plot(CKDE_age, CKDE[i], color=colorMe(i, colors), alpha=1, lw=CDFlw, label=str(labels[i])+(', N=(%d' % N[i])+(', %d' % numGrainsPlotted[i])+('/%d' % numGrains[i])+(')'))
                 if plotDKW:
                     DFWmin, DFWmax = calcDFW(CKDE[i], epsilon[i])
-                    axs[0,0].plot(CKDE_age, DFWmax, '--', color=colorMe(i, colors))
-                    axs[0,0].plot(CKDE_age, DFWmin, '--', color=colorMe(i, colors))
-                    axs[0,0].fill_between(CKDE_age, DFWmax, DFWmin, color=colorMe(i, colors), alpha = 0.5)
+                    ax1.plot(CKDE_age, DFWmax, '--', color=colorMe(i, colors))
+                    ax1.plot(CKDE_age, DFWmin, '--', color=colorMe(i, colors))
+                    ax1.fill_between(CKDE_age, DFWmax, DFWmin, color=colorMe(i, colors), alpha = 0.5)
                 if plotAgesOnCDF:
                     agesErrorsSort = pd.DataFrame({'Ages' : ages[i],'Errors' : errors[i]})
                     agesErrorsSort = agesErrorsSort.sort_values(by=['Ages'])
                     agesErrorsSortY = np.arange(0,1.,1/len(agesErrorsSort['Ages']))
-                    axs[0,0].errorbar(x=agesErrorsSort['Ages'], y=agesErrorsSortY, xerr=agesErrorsSort['Errors'],linestyle='',marker='o',ecolor='black',capsize=2,markerfacecolor=colorMe(i, colors),markeredgecolor='black')
-        axs[0,0].set_ylabel("Cumulative Distribution")
-        axs[0,0].legend(loc="lower right", prop={'size':8})
-        axs[0,0].set_xlim(x1, x2)
-        axs[0,0].set_ylim(0, 1.)
+                    ax1.errorbar(x=agesErrorsSort['Ages'], y=agesErrorsSortY, xerr=agesErrorsSort['Errors'],linestyle='',marker='o',ecolor='black',capsize=2,markerfacecolor=colorMe(i, colors),markeredgecolor='black')
+        ax1.set_ylabel("Cumulative Distribution")
+        ax1.legend(loc="lower right", prop={'size':8})
+        ax1.set_xlim(x1, x2)
+        ax1.set_ylim(0, 1.)
         if whatToPlot == 'both':
-            axs[0,0].get_xaxis().set_ticks([])
-            axs[0,0].get_yaxis().set_visible(True)
+            ax1.get_xaxis().set_ticks([])
+            ax1.get_yaxis().set_visible(True)
         else:
-            axs[0,0].set_xlabel('Age (Ma)')
+            ax1.set_xlabel('Age (Ma)')
         if plotColorBar:
             if len(np.shape(agebins)) == 1:
                 for j in range(nage):
-                    axs[0,0].axvspan(xmin=agebins[j],xmax=agebins[j+1], color = agebinsc[j], alpha = agebinsc_alpha[j])
+                    ax1.axvspan(xmin=agebins[j],xmax=agebins[j+1], color = agebinsc[j], alpha = agebinsc_alpha[j])
             if len(np.shape(agebins)) == 2:
                 for j in range(len(agebins)):
-                    axs[0,0].axvspan(xmin=agebins[j][0],xmax=agebins[j][1], color = agebinsc[j], alpha = agebinsc_alpha[j])
+                    ax1.axvspan(xmin=agebins[j][0],xmax=agebins[j][1], color = agebinsc[j], alpha = agebinsc_alpha[j])
 
     # Plot the relative distribution (PDP and/or KDE)
     if (whatToPlot == 'both' or whatToPlot == 'relative'):
@@ -1074,9 +1059,9 @@ def plotAll_2(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                 # Shift KDE y-values                
                 KDEshift = KDE.copy()
                 KDEshift[i] = KDEshift[i]+distMaxCumSum[i]
-                axs[c,0].plot(KDE_age, KDEshift[i], color='black', lw=KDElw)
+                ax2.plot(KDE_age, KDEshift[i], color='black', lw=KDElw)
                 if colorKDE:
-                    axs[c,0].fill_between(KDE_age, np.min(KDEshift[i]), KDEshift[i], alpha = 1, color=colorMe(i, colors), lw=0)
+                    ax2.fill_between(KDE_age, np.min(KDEshift[i]), KDEshift[i], alpha = 1, color=colorMe(i, colors), lw=0)
 
                 if colorKDEbyAge:
                     if len(np.shape(agebins)) == 1:
@@ -1085,21 +1070,21 @@ def plotAll_2(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                             xage2 = agebins[k+1]
                             KDE_agePart = np.arange(xage1, xage2+xdif, xdif)        
                             KDEshiftPart = KDEshift[i][int(xage1/xdif):int((xage2+xdif)/xdif)]
-                            axs[c,0].fill_between(KDE_agePart, np.min(KDEshift[i]), KDEshiftPart, color=agebinsc[k], lw=0, alpha = agebinsc_alpha[k])
+                            ax2.fill_between(KDE_agePart, np.min(KDEshift[i]), KDEshiftPart, color=agebinsc[k], lw=0, alpha = agebinsc_alpha[k])
                     if len(np.shape(agebins)) ==  2:
                         for k in range(len(agebins)):
                             xage1 = agebins[k][0]
                             xage2 = agebins[k][1]
                             KDE_agePart = np.arange(xage1, xage2+xdif, xdif)
                             KDEshiftPart = KDEshift[i][int(xage1/xdif):int((xage2+xdif)/xdif)]
-                            axs[c,0].fill_between(KDE_agePart, np.min(KDEshift[i]), KDEshiftPart, color=agebinsc[k], lw=0, alpha = agebinsc_alpha[k])
+                            ax2.fill_between(KDE_agePart, np.min(KDEshift[i]), KDEshiftPart, color=agebinsc[k], lw=0, alpha = agebinsc_alpha[k])
             if plotPDP:
                 # Shift PDP y-values
                 PDPshift = PDP.copy()
                 PDPshift[i] = PDPshift[i]+distMaxCumSum[i]
-                axs[c,0].plot(PDP_age, PDPshift[i], color='black', lw=PDPlw)
+                ax2.plot(PDP_age, PDPshift[i], color='black', lw=PDPlw)
                 if colorPDP:
-                    axs[c,0].fill_between(PDP_age, np.min(PDPshift[i]), PDPshift[i], alpha = 1, color=colorMe(i, colors), lw=0)
+                    ax2.fill_between(PDP_age, np.min(PDPshift[i]), PDPshift[i], alpha = 1, color=colorMe(i, colors), lw=0)
                 if colorPDPbyAge:
                     if len(np.shape(agebins)) == 1:        
                         for k in range(nage):
@@ -1107,27 +1092,27 @@ def plotAll_2(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                             xage2 = agebins[k+1]
                             PDP_agePart = np.arange(xage1, xage2+xdif, xdif)        
                             PDPshiftPart = PDPshift[i][int(xage1/xdif):int((xage2+xdif)/xdif)]
-                            axs[c,0].fill_between(PDP_agePart, np.min(PDPshift[i]), PDPshiftPart, color=agebinsc[k], lw=0, alpha = agebinsc_alpha[k])
+                            ax2.fill_between(PDP_agePart, np.min(PDPshift[i]), PDPshiftPart, color=agebinsc[k], lw=0, alpha = agebinsc_alpha[k])
                     if len(np.shape(agebins)) == 2:
                         for k in range(len(agebins)):
                             xage1 = agebins[k][0]
                             xage2 = agebins[k][1]
                             PDP_agePart = np.arange(xage1, xage2+xdif, xdif)        
                             PDPshiftPart = PDPshift[i][int(xage1/xdif):int((xage2+xdif)/xdif)]
-                            axs[c,0].fill_between(PDP_agePart, np.min(PDPshift[i]), PDPshiftPart, color=agebinsc[k], lw=0, alpha = agebinsc_alpha[k])                          
-            axs[c,0].text(x2+(x2-x1)*0.01, distMaxCumSum[i], s=labels[i], size='x-small')
+                            ax2.fill_between(PDP_agePart, np.min(PDPshift[i]), PDPshiftPart, color=agebinsc[k], lw=0, alpha = agebinsc_alpha[k])                          
+            ax2.text(x2+(x2-x1)*0.01, distMaxCumSum[i], s=labels[i], size='x-small')
         
         # Plot colored vertical bars, if selected
         if plotColorBar:
             if len(np.shape(agebins)) == 1:
                 for j in range(nage):
-                    axs[c,0].axvspan(xmin=agebins[j],xmax=agebins[j+1], color = agebinsc[j])
+                    ax2.axvspan(xmin=agebins[j],xmax=agebins[j+1], color = agebinsc[j])
             if len(np.shape(agebins)) == 2:
                 for j in range(len(agebins)):
-                    axs[c,0].axvspan(xmin=agebins[j][0],xmax=agebins[j][1], color = agebinsc[j])
+                    ax2.axvspan(xmin=agebins[j][0],xmax=agebins[j][1], color = agebinsc[j])
 
-        axs[c,0].set_ylim(0)
-        axs[c,0].set_xlim(x1,x2)
+        ax2.set_ylim(0)
+        ax2.set_xlim(x1,x2)
    
     return fig      
 
@@ -1347,30 +1332,41 @@ def plotDouble(sampleList, main_byid_df, ages, errors, numGrains, labels, variab
             'size'   : 14}
     plt.rc('font', **font)
     
-    # Set up the figure grid
-    fig, axs = plt.subplots(n*(t+l),w, figsize=(w,n*(t+l)))
-    c = 0 # counter variable
+    # Set up the figure grid (new in v1.4.0)
+    fig = plt.figure(figsize=(w,n*(t+l)))
+
+    mosaic = []
     for i in range(n):
-        axs[c,0] = plt.subplot2grid((n*(t+l),w),(c,0),colspan=w, rowspan=t) # panel for top plot
-        axs[c+t,0] = plt.subplot2grid((n*(t+l),w),(c+t,0),colspan=w, rowspan=l) # panel for bottom plot (age distribution)
-        axs[c,0].set_ylabel(variableName)
-        axs[c,0].get_xaxis().set_ticks([])
-        axs[c+t,0].get_yaxis().set_ticks([])
-        if i<n-1: # This insures that only the last plot will have an x-axis
-            axs[c+t,0].get_xaxis().set_ticks([])            
-        else:
-            axs[c+t,0].tick_params(direction='out')
-            axs[c+t,0].xaxis.set_ticks_position('bottom')
-            axs[c+t,0].set_xlabel('Age (Ma)')
+        # Top plot
+        for j in range(t):
+            mosaic_line = ['{}'.format(i*2)]*w
+            mosaic.append(mosaic_line)
+        for j in range(l):
+            mosaic_line = ['{}'.format(i*2+1)]*w
+            mosaic.append(mosaic_line)
+
+    axs = fig.subplot_mosaic(mosaic)
+
+    for i, ax in enumerate(axs):
+        if (i % 2) == 0: # Even value, top plot
+            axs[ax].set_ylabel(variableName)
+            axs[ax].get_xaxis().set_ticks([])
+        else: # Odd value, bottom plot
+            axs[ax].get_yaxis().set_ticks([])
+            if i<(n*2)-1: # This insures that only the last plot will have an x-axis
+                axs[ax].get_xaxis().set_ticks([])
+            else:
+                axs[ax].tick_params(direction='out')
+                axs[ax].xaxis.set_ticks_position('bottom')
+                axs[ax].set_xlabel('Age (Ma)')
         if plotLog:
-            axs[c,0].set_xscale('log')
-            axs[c+t,0].set_xscale('log')            
-        fig.subplots_adjust(wspace=0)
-        fig.subplots_adjust(hspace=0)
-        c = c+t+l
+            axs[ax].set_xscale('log')
+            
+    fig.subplots_adjust(wspace=0)
+    fig.subplots_adjust(hspace=0)
     
     # Plot
-    c = 0 # counter variable
+    # c = 0 # counter variable
     for i in range(n):
         if autoScaleY:
             # Determine the minimum and maximum variable in the dataset
@@ -1378,17 +1374,17 @@ def plotDouble(sampleList, main_byid_df, ages, errors, numGrains, labels, variab
             y2 = max(variables[i])
         # Create the upper scatter plot
         # Note that only data points within y1-y2 range will be plotted
-        axs[c,0].scatter(ages[i][np.where((variables[i] > y1) & (variables[i] < y2))],variables[i][np.where((variables[i] > y1) & (variables[i] < y2))], color='white', edgecolor='black', marker='s', s=10, zorder=2)
-        axs[c,0].set_xlim(x1, x2)
-        axs[c,0].set_ylim(y1, y2)
+        axs['{}'.format(i*2)].scatter(ages[i][np.where((variables[i] > y1) & (variables[i] < y2))],variables[i][np.where((variables[i] > y1) & (variables[i] < y2))], color='white', edgecolor='black', marker='s', s=10, zorder=2)
+        axs['{}'.format(i*2)].set_xlim(x1, x2)
+        axs['{}'.format(i*2)].set_ylim(y1, y2)
 
         if plotError:
             if type(variableError) is not str:
-                axs[c,0].errorbar(ages[i][np.where((variables[i] > y1) & (variables[i] < y2))], variables[i][np.where((variables[i] > y1) & (variables[i] < y2))],
+                axs['{}'.format(i*2)].errorbar(ages[i][np.where((variables[i] > y1) & (variables[i] < y2))], variables[i][np.where((variables[i] > y1) & (variables[i] < y2))],
                  xerr = errors[i][np.where((variables[i] > y1) & (variables[i] < y2))], yerr = variables[i][np.where((variables[i] > y1) & (variables[i] < y2))]*variableError,
                   fmt='none', color='black', ecolor='black', capthick=2, zorder=1)
             else:
-                axs[c,0].errorbar(ages[i][np.where((variables[i] > y1) & (variables[i] < y2))], variables[i][np.where((variables[i] > y1) & (variables[i] < y2))],
+                axs['{}'.format(i*2)].errorbar(ages[i][np.where((variables[i] > y1) & (variables[i] < y2))], variables[i][np.where((variables[i] > y1) & (variables[i] < y2))],
                  xerr = errors[i][np.where((variables[i] > y1) & (variables[i] < y2))], yerr = variableErrorToPlot[i][np.where((variables[i] > y1) & (variables[i] < y2))],
                   fmt='none', color='black', ecolor='black', capthick=2, zorder=1)
         if plotMovingAverage:
@@ -1419,7 +1415,7 @@ def plotDouble(sampleList, main_byid_df, ages, errors, numGrains, labels, variab
                     #return np.array(map(np.median,b))
                 xAvg = RunningMedian(ageSort, windowSize)
                 yAvg = RunningMedian(variableSort,windowSize)
-            axs[c,0].plot(xAvg,yAvg,color='darkred',lw=2)
+            axs['{}'.format(i*2)].plot(xAvg,yAvg,color='darkred',lw=2)
                 
         # Plot the relative distribution (PDP and/or KDE)
         if plotKDE:
@@ -1430,10 +1426,10 @@ def plotDouble(sampleList, main_byid_df, ages, errors, numGrains, labels, variab
         # KDE plot
         if plotKDE:
             # Plot KDE as a line
-            axs[c+t,0].plot(KDE_age, KDE[i], color='black', lw=KDElw, label=labels[i])
+            axs['{}'.format(i*2+1)].plot(KDE_age, KDE[i], color='black', lw=KDElw, label=labels[i])
             # Fill the KDE      
             if colorKDE:
-                axs[c+t,0].fill_between(KDE_age, 0, KDE[i], alpha = 1, color=colorMe(i, colors), lw=0)
+                axs['{}'.format(i*2+1)].fill_between(KDE_age, 0, KDE[i], alpha = 1, color=colorMe(i, colors), lw=0)
             if colorKDEbyAge:
                 if len(np.shape(agebins)) == 1:
                     for k in range(nage):
@@ -1441,30 +1437,30 @@ def plotDouble(sampleList, main_byid_df, ages, errors, numGrains, labels, variab
                         xage2 = agebins[k+1]
                         KDE_agePart = np.arange(xage1, xage2+xdif, xdif)        
                         KDEpart = KDE[i][int(xage1/xdif):int((xage2+xdif)/xdif)]
-                        axs[c+t,0].fill_between(KDE_agePart, 0, KDEpart, alpha = 1, color=agebinsc[k], lw=0)
+                        axs['{}'.format(i*2+1)].fill_between(KDE_agePart, 0, KDEpart, alpha = 1, color=agebinsc[k], lw=0)
                 if len(np.shape(agebins)) == 2:
                     for k in range(len(agebins)):
                         xage1 = agebins[k][0]
                         xage2 = agebins[k][1]
                         KDE_agePart = np.arange(xage1, xage2+xdif, xdif)        
                         KDEpart = KDE[i][int(xage1/xdif):int((xage2+xdif)/xdif)]
-                        axs[c+t,0].fill_between(KDE_agePart, 0, KDEpart, alpha = 1, color=agebinsc[k], lw=0)
-            axs[c+t,0].set_xlim(x1, x2)
-            axs[c+t,0].legend(loc="upper right", prop={'size':8})
+                        axs['{}'.format(i*2+1)].fill_between(KDE_agePart, 0, KDEpart, alpha = 1, color=agebinsc[k], lw=0)
+            axs['{}'.format(i*2+1)].set_xlim(x1, x2)
+            axs['{}'.format(i*2+1)].legend(loc="upper right", prop={'size':8})
             # Adjust the y-axis scale, depending on normalization
             if normPlots:
                 kdeMax = 0
                 for k in range(len(sampleList)):
                     if max(KDE[k]) > kdeMax:
                         kdeMax = max(KDE[k])
-                axs[c+t,0].set_ylim(0, kdeMax)
+                axs['{}'.format(i*2+1)].set_ylim(0, kdeMax)
             else:
-                axs[c+t,0].set_ylim([0, max(KDE[i])+max(KDE[i])*0.05])                
-            axs[c+1,0].get_yaxis().set_visible(False)
+                axs['{}'.format(i*2+1)].set_ylim([0, max(KDE[i])+max(KDE[i])*0.05])                
+            axs['{}'.format(i*2+1)].get_yaxis().set_visible(False)
     
         # PDP plot
         if plotPDP:
-            axPDP = axs[c+t,0].twinx() # to allow the PDP to plot on a different scale
+            axPDP = axs['{}'.format(i*2+1)].twinx() # to allow the PDP to plot on a different scale
             axPDP.plot(PDP_age, PDP[i], color='black', ls='-', alpha=1, lw=PDPlw, label=labels[i])
             if not plotKDE: # Only print the label if the KDE is not already plotted
                 axPDP.legend(loc="upper right", prop={'size':8})
@@ -1509,7 +1505,7 @@ def plotDouble(sampleList, main_byid_df, ages, errors, numGrains, labels, variab
                 
         # Histogram plot
         if plotHist:
-            axHist = axs[c+t,0].twinx() # to allow the histogram to plot on a different scale
+            axHist = axs['{}'.format(i*2+1)].twinx() # to allow the histogram to plot on a different scale
             bin_array = np.arange(x1, x2+xdif, b)
             axHist.hist(ages[i], bins=bin_array, color='black', fill=None, alpha=1, histtype='bar', density=False)
             axHist.set_xlim([x1, x2]) # Use this code to set the x-axis scale
@@ -1527,11 +1523,11 @@ def plotDouble(sampleList, main_byid_df, ages, errors, numGrains, labels, variab
         if plotColorBar:
             if len(np.shape(agebins)) == 1:
                 for j in range(nage):
-                    axs[c+1,0].axvspan(xmin=agebins[j],xmax=agebins[j+1], color = agebinsc[j])
+                    axs['{}'.format(i*2+1)].axvspan(xmin=agebins[j],xmax=agebins[j+1], color = agebinsc[j])
             if len(np.shape(agebins)) == 2:
                 for j in range(len(agebins)):
-                    axs[c,0].axvspan(xmin=agebins[j][0],xmax=agebins[j][1], color = agebinsc[j])
-        c = c+t+l
+                    axs['{}'.format(i*2)].axvspan(xmin=agebins[j][0],xmax=agebins[j][1], color = agebinsc[j])
+        # c = c+t+l
         
     return fig
     
@@ -2000,18 +1996,18 @@ def MDAtoCSV(sampleList, ages, errors, numGrains, labels, fileName, sortBy, barW
         writer.writerow(('Sample','N', 'YSG', 'YSG_err1s', 'YC1S WM', 'YC1S WM 1serr', 'YC1S WM MSWD', 'YC1S cluster size', 'YC2S WM', 'YC2S WM 1serr', 'YC2S WM MSWD', 'YC2S cluster size'))
         N = len(sampleList) # Number of samples or groups of samples
         if makePlot:
-            figMDA, ax = plt.subplots(N,1, figsize=(plotWidth,N*plotHeight)) #figsize=(width,height)
+            # New as of v1.4.0
+            fig = plt.figure(figsize=(plotWidth,N*plotHeight))
+
+            mosaic = []
             for i in range(N):
-                if N > 1:
-                    ax[i] = plt.subplot2grid((N,1),(i,0))
-                else:
-                    break
+                mosaic.append([str(i)])
+            axs = fig.subplot_mosaic(mosaic)
+
         for i in range(N):
             if makePlot:
-                if N > 1:
-                    ax_i = ax[i]
-                else:
-                    ax_i = ax
+                ax_i = axs['{}'.format(i)]
+
             error1s = errors[i]
             error2s = errors[i]*2
             data_err1s_ageSort = list(zip(ages[i], error1s))            
@@ -2114,7 +2110,7 @@ def MDAtoCSV(sampleList, ages, errors, numGrains, labels, fileName, sortBy, barW
                 ax_i.text(xmin+xdif*plotWidth*0.05, ymax+ydif*0.02, s=("Calculated uncertainties are reported at the 1"+r'$\sigma$'+" level"), fontsize='small')
 
         if makePlot:
-            return figMDA
+            return fig
 
 class MDS_class:
     """
@@ -2133,7 +2129,7 @@ class MDS_class:
     Optional Paramters
     ----------    
     metric : set to False for non-metric MDS or set to True for metric MDS (default is False). Non-metric MDS is recommended (Vermeesch, 2013)
-    criteria : similiarty metric used in the MDS calculation. Options: 'Vmax', 'Dmax', 'R2-PDP', 'R2-KDE' (default is 'Vmax')
+    criteria : similiarty metric used in the MDS calculation. Options: 'Vmax', 'Dmax', 'R2-PDP', 'R2-KDE', 'W2' (default is 'Vmax')
     bw : KDE bandwidth. Options are 'optimizedFixed', 'optimizedVariable', or a number (bandwidth in Myr) (default is 'optimizedFixed')
     n_init : the number of initializations used in the MDS calculation. The final answer will be the initialation that results in the lowest stress value (default = 1000)
     max_iter : the maximum number of iterations the MDS algorthm will run for a given initialization (default = 1000)
@@ -2165,9 +2161,15 @@ class MDS_class:
         self.n_init = n_init
         self.max_iter = max_iter
 
+        # Generate sample labels for plotting
+        if type(self.sampleList[0])==tuple:
+            self.sample_labels = [x[1] for x in sampleList]
+        else:
+            self.sample_labels = sampleList
+
         # Calculate the distributions from which to compute the dissimilarity matrix
-        if self.criteria == 'Dmax' or self.criteria == 'Vmax':
-            self.CDF = CDFcalcAges(self.ages)[1]
+        if self.criteria == 'Dmax' or self.criteria == 'Vmax' or self.criteria == 'W2' or self.criteria == 'W1':
+            self.CDF_age, self.CDF = CDFcalcAges(self.ages)
 
         if (self.criteria == 'R2-PDP' or self.criteria == 'similarity-PDP' or self.criteria == 'likeness-PDP'):
             self.PDP = PDPcalcAges(ages=self.ages, errors=self.errors, x1=x1, x2=x2, xdif=xdif, cumulative=False)[1]
@@ -2184,6 +2186,12 @@ class MDS_class:
                 if self.criteria == 'Vmax':
                     self.matrix[i,j] = calcVmax(self.CDF[i], self.CDF[j])
                     self.label = 'Vmax'
+                if self.criteria == 'W2':
+                    self.matrix[i,j] = calc_wasserstein(self.CDF[i], self.CDF[j], self.CDF_age, p=2)
+                    self.label = 'W2'
+                if self.criteria == 'W1':
+                    self.matrix[i,j] = calc_wasserstein(self.CDF[i], self.CDF[j], self.CDF_age, p=1)
+                    self.label = 'W1'
                 # The following criteria are similarity metrics. Following Saylor and Sundell (2016), we
                 # transform similarity into dissimilarity as sqrt(1-D)
                 if self.criteria == 'R2-PDP':
@@ -2204,6 +2212,7 @@ class MDS_class:
                 if self.criteria == 'likeness-KDE':
                     self.matrix[i,j] = np.sqrt(1-calcLikeness(self.KDE[i], self.KDE[j]))
                     self.label = 'sqrt(1 - similarity-KDE)'
+
         self.min_dim = min_dim
         self.max_dim = max_dim
         self.dim = dim
@@ -2217,15 +2226,15 @@ class MDS_class:
         # Loop through and perform MDS for each number of dimensions considered
         for i in range(max_dim-min_dim+1):
             if self.metric or self.n_init == 'metric': # Perform metric MDS
-                self.mds = manifold.MDS(n_components = min_dim+i, random_state=1, dissimilarity='precomputed', max_iter= self.max_iter)
+                self.mds = manifold.MDS(n_components = min_dim+i, random_state=1, dissimilarity='precomputed', max_iter= self.max_iter, normalized_stress='auto')
                 self.pos = self.mds.fit(self.matrix).embedding_
                 stress = self.mds.fit(self.matrix).stress_
                 if not self.metric: # Non-metric MDS (metric MDS  used as initial configuration)
-                    self.nmds = manifold.MDS(n_components = min_dim+i, metric=False, random_state=1, dissimilarity='precomputed', n_init = 1, max_iter= self.max_iter)
+                    self.nmds = manifold.MDS(n_components = min_dim+i, metric=False, random_state=1, dissimilarity='precomputed', n_init = 1, max_iter= self.max_iter, normalized_stress='auto')
                     self.npos = self.nmds.fit_transform(self.matrix, init=self.pos)
                     stress = self.nmds.fit(self.matrix, init=self.pos).stress_
             else: # Non-metric MDS (metric MDS not used as initial configuration)
-                self.nmds = manifold.MDS(n_components = min_dim+i, metric=False, random_state=1, dissimilarity='precomputed', n_init = self.n_init, max_iter= self.max_iter)
+                self.nmds = manifold.MDS(n_components = min_dim+i, metric=False, random_state=1, dissimilarity='precomputed', n_init = self.n_init, max_iter= self.max_iter, normalized_stress='auto')
                 self.npos = self.nmds.fit_transform(self.matrix)
                 stress = self.nmds.fit(self.matrix).stress_
 
@@ -2290,14 +2299,14 @@ class MDS_class:
         for i in range(len(self.ages)):
             for j in range(len(self.ages)):
                 if (halfMatrix and j>i):
-                    ax[i,j].axis('off')
+                    ax[i,j].set_axis_off()
                     continue                       
                 else:
                     if (self.criteria == 'R2-PDP' or self.criteria == 'similarity-PDP' or self.criteria == 'likeness-PDP'):
                         ax[i,j].plot(np.cumsum(self.PDP[i]),np.cumsum(self.PDP[j]),'-',color='red')
                     if (self.criteria == 'R2-KDE' or self.criteria == 'similarity-KDE' or self.criteria == 'likeness-KDE'):
                         ax[i,j].plot(np.cumsum(self.KDE[i]),np.cumsum(self.KDE[j]),'-',color='red')
-                    if self.criteria == 'Vmax' or self.criteria == 'Dmax':
+                    if self.criteria == 'Vmax' or self.criteria == 'Dmax' or self.criteria == 'W2' or self.criteria == 'W1':
                         ax[i,j].plot(self.CDF[i],self.CDF[j],'-',color='red')
                     ax[i,j].plot([0,1],[0,1],'--',color='black')
                     ax[i,j].get_xaxis().set_ticks([])
@@ -2305,9 +2314,9 @@ class MDS_class:
                     ax[i,j].set_frame_on(True)
                     ax[i,j].grid()
                     if i == len(self.ages)-1:
-                        ax[i,j].set_xlabel(self.sampleList[j], rotation='vertical')
+                        ax[i,j].set_xlabel(self.sample_labels[j], rotation='vertical')
                     if j == 0:
-                        ax[i,j].set_ylabel(self.sampleList[i], rotation='horizontal', ha='right')
+                        ax[i,j].set_ylabel(self.sample_labels[i], rotation='horizontal', ha='right')
 
         if savePlot:
             pathlib.Path('Output').mkdir(parents=True, exist_ok=True) # Recursively creates the directory and does not raise an exception if the directory already exists 
@@ -2338,13 +2347,16 @@ class MDS_class:
 
         figHeatMap, ax = plt.subplots(figsize=figsize)
         if plotType == 'dissimilarity':
-            im = ax.imshow(self.matrix, cmap='Reds', vmin=0, vmax=1)
+            if self.criteria == 'W2' or self.criteria == 'W1':
+                im = ax.imshow(self.matrix, cmap='Reds', vmin=0) # Because W2 and W1 vales >> 1
+            else:
+                im = ax.imshow(self.matrix, cmap='Reds', vmin=0, vmax=1)
         if plotType == 'distance':
             im = ax.imshow(self.distancesArray[self.dim-self.min_dim], cmap='Reds')
         ax.set_xticks(np.arange(len(self.sampleList)))
         ax.set_yticks(np.arange(len(self.sampleList)))
-        ax.set_xticklabels(self.sampleList)
-        ax.set_yticklabels(self.sampleList)
+        ax.set_xticklabels(self.sample_labels)
+        ax.set_yticklabels(self.sample_labels)
         cbar = figHeatMap.colorbar(im)
         if plotType == 'dissimilarity':
             cbar.set_label(label=self.label)
@@ -2388,12 +2400,11 @@ class MDS_class:
             print('Only one dimension modeled! Cannot plot stress vs number of dimensions')
         else:
             figStress, ax = plt.subplots(figsize=figsize)
-            if stressType == 'sklearn' or stressType == 'Stress-1':
-                ax.plot(np.arange(self.max_dim)+1, self.stressArray,'o', markerfacecolor='white', markeredgecolor='black')
-                ax.plot(np.arange(self.max_dim)+1, self.stressArray, '-', color='black')
-                ax.set_ylabel('Final stress (the sum of squared distance of the disparities \nand the distances for all constrained points)')
+            ax.plot(np.arange(self.max_dim)+1, self.stressArray,'o', markerfacecolor='white', markeredgecolor='black')
+            ax.plot(np.arange(self.max_dim)+1, self.stressArray, '-', color='black')
+            ax.set_ylabel('Final stress')
             if stressType == 'Stress-1':
-                print('Warning: Stress-1 no longer supported. Stress returned by sklearn.manifold.MDS is returned instead')
+                print('Warning: Stress-1 no longer supported. As of scikit-learn v1.4.0, Stress-1 (Kruskal, 1964) is returned for non-metric MDS (i.e., metric=False). For metric MDS (i.e., metric=True), stress values are the "sum of squared distance of the disparities and the distances for all constrained points". Please refer to the sklearn.manifold.MDS documentation for additional details.')
                 #ax.plot(np.arange(self.max_dim)+1, self.stress1Array,'o', markerfacecolor='white', markeredgecolor='black')
                 #ax.plot(np.arange(self.max_dim)+1, self.stress1Array, '-', color='black')
                 #ax.set_ylabel('Stress-1 (Kruskal, 1964)')
@@ -2632,10 +2643,10 @@ def MDS(ages, errors, labels, sampleList, metric=False, plotWidth='10', plotHeig
                 matrix[i,j] = calcVmax(dist[i], dist[j])
             if criteria == 'R2-PDP' or criteria == 'R2-KDE':
                 matrix[i,j] = calcComplR2(dist[i], dist[j])     
-    mds = manifold.MDS(random_state=1, dissimilarity='precomputed', n_init=1)
+    mds = manifold.MDS(random_state=1, dissimilarity='precomputed', n_init=1, normalized_stress='auto')
     pos = mds.fit(matrix).embedding_
     posStress = mds.fit(matrix).stress_     
-    nmds = manifold.MDS(metric=False, random_state=1, dissimilarity='precomputed', n_init=1)
+    nmds = manifold.MDS(metric=False, random_state=1, dissimilarity='precomputed', n_init=1, normalized_stress='auto')
     npos = nmds.fit_transform(matrix, init=pos)
     nposStress = mds.fit(matrix).stress_ 
     if metric:
@@ -2766,46 +2777,50 @@ def plotDoubleDating(main_byid_df, sampleList, x1, x2, y1, y2, plotKDE, colorKDE
                  ]
         path = Path(verts, codes)
 
-        # Specify plot characteristics and axes
-        fig, axs = plt.subplots(5,5, figsize=(width,height))
+        # Specify plot characteristics and axes (new v1.4.0)
+        fig = plt.figure(figsize=(width,height))
+
+        mosaic = [['0,0','0,0','0,0','0,0','0,1'],
+         ['0,0','0,0','0,0','0,0','0,1'],
+         ['0,0','0,0','0,0','0,0','0,1'],
+         ['0,0','0,0','0,0','0,0','0,1'],
+         ['1,0','1,0','1,0','1,0','1,1']]
+
+        axs = fig.subplot_mosaic(mosaic)
 
         # Scatterplot characteristics
-        axs[0,0] = plt.subplot2grid((5,5),(0,0),rowspan=4, colspan=4) # scatterplot subplot
-        axs[0,0].xaxis.set_ticks_position('top')
-        axs[0,0].plot([x1,x2],[x1,x2], color='black', lw=1)
-        axs[0,0].errorbar(x = xF, y = yF, xerr = xerrF, yerr = yerrF, fmt='s', color='black', ecolor='gray', capthick=2)
+        axs['0,0'].xaxis.set_ticks_position('top')
+        axs['0,0'].plot([x1,x2],[x1,x2], color='black', lw=1)
+        axs['0,0'].errorbar(x = xF, y = yF, xerr = xerrF, yerr = yerrF, fmt='s', color='black', ecolor='gray', capthick=2)
         patch = patches.PathPatch(path, facecolor='lightgray', lw=0)
-        axs[0,0].add_patch(patch)
-        axs[0,0].xaxis.set_label_position('top') 
-        axs[0,0].set_xlim(x1, x2)
-        axs[0,0].set_ylim(y1, y2)
+        axs['0,0'].add_patch(patch)
+        axs['0,0'].xaxis.set_label_position('top') 
+        axs['0,0'].set_xlim(x1, x2)
+        axs['0,0'].set_ylim(y1, y2)
 
         # (U-Th)/He plot characteristics
-        axs[0,1] = plt.subplot2grid((5,5),(0,4), rowspan=4) # panel for ZHe distribution
-        axs[0,1].get_xaxis().set_ticks([])
-        axs[0,1].set_ylabel('Zircon (U-Th)/He Age (Ma)')
-        axs[0,1].yaxis.set_label_position('right')    
-        axs[0,1].yaxis.set_ticks_position('right')
+        axs['0,1'].get_xaxis().set_ticks([])
+        axs['0,1'].set_ylabel('Zircon (U-Th)/He Age (Ma)')
+        axs['0,1'].yaxis.set_label_position('right')    
+        axs['0,1'].yaxis.set_ticks_position('right')
 
         # U-Pb plot characteristics
-        axs[1,0] = plt.subplot2grid((5,5),(4,0), colspan=4) # panel for the ZUPb distribution
-        axs[1,0].get_yaxis().set_ticks([])
-        axs[1,0].set_xlabel('Zircon U-Pb Age (Ma)')
+        axs['1,0'].get_yaxis().set_ticks([])
+        axs['1,0'].set_xlabel('Zircon U-Pb Age (Ma)')
 
         # Emply plot in the lower right corner
-        axs[1,1] = plt.subplot2grid((5,5),(4,4)) # empty corner
-        axs[1,1].axis('off')
+        axs['1,1'].set_axis_off()
 
         # Zircon U-Pb age distribution
         if plotHist:
             bin_array = np.arange(x1, x2+xdif, b)
-            axsHist = axs[1,0].twinx()
+            axsHist = axs['1,0'].twinx()
             axsHist.hist([xF], bins=bin_array, color='black', fill=None, alpha=1, histtype='bar', density=False)
             axsHist.set_xlim(x1, x2)
             axsHist.set_xlabel('Zircon U-Pb Age (Ma)')
         if plotPDP:
             xPDP = PDPcalcAges(ages=[xF],errors=[xerrF], xdif=xdif)
-            axsPDP = axs[1,0].twinx()
+            axsPDP = axs['1,0'].twinx()
             axsPDP.plot(xPDP[0],xPDP[1][0], color='black', lw=1)
             axsPDP.set_xlim(x1, x2)
             axsPDP.set_ylim(0,np.max(xPDP[1][0])*1.1)
@@ -2832,7 +2847,7 @@ def plotDoubleDating(main_byid_df, sampleList, x1, x2, y1, y2, plotKDE, colorKDE
                         axsPDP.fill_between(PDP_agePart, 0, PDPpart, alpha = 1, color=agebinsc[j])
         if plotKDE:
             xKDE =  KDEcalcAges(ages=x, xdif=dif, bw=bw, bw_x=None)
-            axsKDE = axs[1,0].twinx()
+            axsKDE = axs['1,0'].twinx()
             axsKDE.plot(xKDE[0],xKDE[1][0], color='black', lw=1)
             axsKDE.set_xlim(x1, x2)
             axsKDE.set_ylim(0,np.max(xKDE[1][0])*1.1)
@@ -2859,7 +2874,7 @@ def plotDoubleDating(main_byid_df, sampleList, x1, x2, y1, y2, plotKDE, colorKDE
 
         # Zircon (U-Th)/He age distribution   
         if plotHist:
-            axsHist = axs[0,1].twiny()
+            axsHist = axs['0,1'].twiny()
             axsHist.invert_xaxis()
             bin_array = np.arange(x1, x2+xdif, b)
             axsHist.hist(yF, orientation='horizontal', bins=bin_array, color='black', fill=None, alpha=1, histtype='bar', density=False)
@@ -2867,7 +2882,7 @@ def plotDoubleDating(main_byid_df, sampleList, x1, x2, y1, y2, plotKDE, colorKDE
             axsHist.set_ylabel('Zircon (U-Th)/He Age (Ma)')
         if plotPDP:
             yPDP = PDPcalcAges(ages=[yF],errors=[yerrF], xdif=xdif)
-            axsPDP = axs[0,1].twiny()
+            axsPDP = axs['0,1'].twiny()
             axsPDP.plot(yPDP[1][0],yPDP[0], color='black', lw=1)
             axsPDP.set_ylim(y1, y2)
             axsPDP.set_xlim(np.max(yPDP[1][0])*1.1,0)
@@ -2894,7 +2909,7 @@ def plotDoubleDating(main_byid_df, sampleList, x1, x2, y1, y2, plotKDE, colorKDE
                         axsPDP.fill_betweenx(PDP_agePart, 0, PDPpart, alpha = 1, color=agebinsc[j])
         if plotKDE:
             yKDE = KDEcalcAges(ages=[yF], xdif=xdif, bw=bw, bw_x=None)           
-            axsKDE = axs[0,1].twiny()
+            axsKDE = axs['0,1'].twiny()
             axsKDE.plot(yKDE[1][0],yKDE[0], color='black', lw=1)
             axsKDE.set_ylim(y1, y2)
             axsKDE.set_xlim(np.max(yKDE[1][0])*1.1,0)
@@ -2921,9 +2936,9 @@ def plotDoubleDating(main_byid_df, sampleList, x1, x2, y1, y2, plotKDE, colorKDE
 
         # Label the upper left hand corner of the plot with the sample ID
         if type(sampleList[0])==tuple:
-            axs[0,0].text(x=x1+(x2-x1)*0.02, y=y2+(y2-y1)*-0.05, s=sampleList[i][1])
+            axs['0,0'].text(x=x1+(x2-x1)*0.02, y=y2+(y2-y1)*-0.05, s=sampleList[i][1])
         else:
-            axs[0,0].text(x=x1+(x2-x1)*0.02, y=y2+(y2-y1)*-0.05, s=sampleList[i])
+            axs['0,0'].text(x=x1+(x2-x1)*0.02, y=y2+(y2-y1)*-0.05, s=sampleList[i])
         fig.subplots_adjust(wspace=0)
         fig.subplots_adjust(hspace=0)
         if savePlot:
@@ -3031,7 +3046,7 @@ def agesErrorsCSV(ages, errors, sampleList, fileName):
             writer.writerow(row)    
     
 def calcComparisonCSV(ages, errors, numGrains, labels, sampleList, calculateSimilarity, calculateLikeness, calculateKS, calculateKuiper, 
-                  calculateR2, fileName, distType, bw, bw_x=None, xdif=1, x1=0, x2=4500):
+                  calculateR2, calculateW2, fileName, distType, bw, bw_x=None, xdif=1, x1=0, x2=4500):
     """
     Creates matricies of sample comparisons using a number of different metrics (see Saylor and Sundell, 2016). Similiarity, likness, Kolgomorov-Smirnov statistic (Dmax and p-value), Kuiper statistic (Vmax and p-value), and cross-correlation of relative probability density functions. Similiarty, likeness, and cross-correlation values are computed based on either the probability density plot (PDP) or kernal density estimation (KDE).
 
@@ -3051,6 +3066,7 @@ def calcComparisonCSV(ages, errors, numGrains, labels, sampleList, calculateSimi
     calculateKS : set to True to calculate Dmax and the Kolgomorov-Smirnov statistic
     calculateKuiper : set to True to calculate Vmax and the Kuiper statistic
     calcualteR2 : set to True to calculate the cross-correlation coefficient
+    calcualteW2 : set to True to calculate the second Wasserstein distance
     fileName : specify name of output CSV file
     distType : specify the type of relative distribution to compare for similarity, likeness, and cross-correlation calculations. Options: 'PDP' or 'KDE'
     bw : KDE bandwidth. Options are 'optimizedFixed', 'optimizedVariable', or a number (bandwidth in Myr)
@@ -3155,7 +3171,19 @@ def calcComparisonCSV(ages, errors, numGrains, labels, sampleList, calculateSimi
                 for j in range(len(sampleList)):
                     r2Matrix[i][j] = calcR2(dist[i],dist[j])
                     dataRow = np.append(dataRow, r2Matrix[i][j])
-                writer.writerow(dataRow)            
+                writer.writerow(dataRow)
+
+        # Calculate the second Wasserstein distance
+        if calculateW2:
+            writer.writerow("")
+            W2Matrix = np.empty(shape=(len(sampleList),len(sampleList)))
+            CDF = CDFcalcAges(ages)
+            for i in range(len(sampleList)):
+                dataRow = [labels[i],numGrains[i]]
+                for j in range(len(sampleList)):
+                    W2Matrix[i][j] = calc_wasserstein(CDF[1][i],CDF[1][j],xage=CDF[0], p=2)    
+                    dataRow = np.append(dataRow,W2Matrix[i][j])
+                writer.writerow(dataRow)
 
 def weightedMeanCSV(ages, errors, numGrains, labels, fileName='weightedMean.csv'):
     """
@@ -3186,10 +3214,6 @@ def weightedMeanCSV(ages, errors, numGrains, labels, fileName='weightedMean.csv'
             dataRow = np.append(dataRow, weightedMean(ages[i], errors[i])[1])
             dataRow = np.append(dataRow, weightedMean(ages[i], errors[i])[2])
             writer.writerow(dataRow)
-
-###############################################################
-# Helper functions 
-###############################################################            
 
 def num_after_point(x):
     """
@@ -3764,6 +3788,27 @@ def calcComplR2(dist1, dist2):
     r2 = calcR2(dist1, dist2)
     cR2 = 1-r2
     return cR2
+
+def calc_wasserstein(CDF1, CDF2, xage, dt=0.00001, p=2):
+    '''
+    Computes the Wasserstein distance (Lipp and Vermeesch, 2023: Geochronology, https://doi.org/10.5194/gchron-5-263-2023)
+
+    Parameters
+    ----------
+    CDF1, CDF2 : arrays, Cumulative probability distributions of the two distributions to be compared
+    xage : 1-D array, x-axis array to calculate quantile functions over
+    dt : float, discretization intervals for cumulative probability (0-1) (optional, default = 0.00001)
+    p : int, level of Wasserstein distance, recommended values of 1 or 2 (default=2)
+    '''
+
+    # x-values are cumulative probability (0-1)
+    x_values = np.arange(0,1+dt,dt)
+    
+    # Quantile (or percent-point) functions
+    ppf1 = interp1d(CDF1, xage)
+    ppf2 = interp1d(CDF2, xage)
+    
+    return np.power(np.sum(np.abs(ppf1(x_values)-ppf2(x_values))**p*dt), 1/p)
     
 
 def peakAge(DF_age, DF, ages, errors, thres=0.05, minDist=5, minPeakSize=3):
