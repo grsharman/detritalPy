@@ -457,7 +457,6 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
         print('Warning: The x-axis may not be plotted in log scale while using a split axis')
         return None
 
-
     # Sets up the matplotlib figure and axes structure (new as of v1.4.0)
     mosaic = []
     if (whatToPlot == 'cumulative' or whatToPlot == 'both'):
@@ -483,7 +482,6 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
     axs = fig.subplot_mosaic(mosaic)
     fig.subplots_adjust(wspace=0)
     fig.subplots_adjust(hspace=0)
-
 
     # Adjust axes parameters (new as of v1.4.0)
     if whatToPlot == 'cumulative':
@@ -660,7 +658,7 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
             for i in range(len(sampleList)):
                 # Plot the KDE as a heat map
                 if plotHeatMap:
-                    axHeat = axs[c+i,h+1].twinx()
+                    axHeat = axs['{},{}'.format(i+1,h+1)].twinx() # axs[c+i,h+1]
                     if isinstance(x1, list) == False:
                         axHeat.set_xlim([x1, x2])
                     else:
@@ -753,9 +751,9 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                     # Plot depositional age as a vertical line, if selected                
                     if plotDepoAge:
                         if len(depoAge) == 1:
-                            axs[c+i,h+1].axvline(x=depoAge, color='darkred')
+                            axs['{},{}'.format(i+1,h+1)].axvline(x=depoAge, color='darkred') # axs[c+i,h+1]
                         else:
-                            axs[c+i,h+1].axvline(x=depoAge[i], color=colorMe(i, colors))
+                            axs['{},{}'.format(i+1,h+1)].axvline(x=depoAge[i], color=colorMe(i, colors)) # axs[c+i,h+1]
                     axPDP.plot(PDP_age, PDP[i]*dx_pct[h], color='black', ls='-', alpha=1, lw=PDPlw, label=labels[i])
                     if not plotKDE: # Only print the label if the KDE is not already plotted
                         if h == loops-1: # Only plot legend for rightmost plot
@@ -799,10 +797,16 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
                             for j in range(len(agebins)):
                                 xage1 = agebins[j][0]
                                 xage2 = agebins[j][1]
-                                if (xage2 > x2 and xage1 <= x2): # Avoids a problem that would otherwise occur if any age bins are greater than x2
-                                    xage2 = x2
-                                if (xage2 > x2 and xage1 >= x2):
-                                    break
+                                if isinstance(x1, list) == False:
+                                    if (xage2 > x2 and xage1 <= x2): # Avoids a problem that would otherwise occur if any age bins are greater than x2
+                                        xage2 = x2
+                                    if (xage2 > x2 and xage1 >= x2):
+                                        break
+                                else:
+                                    if (xage2 > x2[h] and xage1 <= x2[h]): # Avoids a problem that would otherwise occur if any age bins are greater than x2
+                                        xage2 = x2[h]
+                                    if (xage2 > x2[h] and xage1 >= x2[h]):
+                                        break
                                 PDP_agePart = np.arange(xage1, xage2+xdif, xdif)
                                 PDPpart = PDP[i][int(xage1/xdif):int((xage2+xdif)/xdif)]
                                 axPDP.fill_between(PDP_agePart, 0, PDPpart*dx_pct[h], color=agebinsc[j], alpha = agebinsc_alpha[j])
@@ -3046,7 +3050,8 @@ def agesErrorsCSV(ages, errors, sampleList, fileName):
             writer.writerow(row)    
     
 def calcComparisonCSV(ages, errors, numGrains, labels, sampleList, calculateSimilarity, calculateLikeness, calculateKS, calculateKuiper, 
-                  calculateR2, calculateW2, fileName, distType, bw, bw_x=None, xdif=1, x1=0, x2=4500):
+                  calculateR2, fileName, distType, bw, bw_x=None, xdif=1, x1=0, x2=4500,
+                  calculateW2=False):
     """
     Creates matricies of sample comparisons using a number of different metrics (see Saylor and Sundell, 2016). Similiarity, likness, Kolgomorov-Smirnov statistic (Dmax and p-value), Kuiper statistic (Vmax and p-value), and cross-correlation of relative probability density functions. Similiarty, likeness, and cross-correlation values are computed based on either the probability density plot (PDP) or kernal density estimation (KDE).
 
