@@ -2850,7 +2850,7 @@ def plotDoubleDating(main_byid_df, sampleList, x1, x2, y1, y2, plotKDE, colorKDE
                         PDP_agePart = np.arange(xage1, xage1+len(PDPpart), xdif)
                         axsPDP.fill_between(PDP_agePart, 0, PDPpart, alpha = 1, color=agebinsc[j])
         if plotKDE:
-            xKDE =  KDEcalcAges(ages=x, xdif=dif, bw=bw, bw_x=None)
+            xKDE =  KDEcalcAges(ages=x, xdif=xdif, bw=bw, bw_x=None)
             axsKDE = axs['1,0'].twinx()
             axsKDE.plot(xKDE[0],xKDE[1][0], color='black', lw=1)
             axsKDE.set_xlim(x1, x2)
