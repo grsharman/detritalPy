@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import pathlib
 
-def YSG(ages, errors, sigma=1):
+def YSG(ages, errors, sigma=1, return_bool=False):
     """
     Calculate the youngest single grain (YSG), where the YSG is defined as the youngest grain age plus error of uncertainty sigma (default is 1 sigma).
 
@@ -17,6 +17,7 @@ def YSG(ages, errors, sigma=1):
     ages : a 2-D array of ages, len(ages)=number of samples or sample groups
     errors : a 2-D array of 1-sigma errors for each sample or sample group, len(errors)=number of samples or sample groups
     sigma : (optional) Options are 1 or 2 (default is 1)
+    return_bool : (optional) boolean. Specifies whether to return a list of boolean values that correspond to which analysis was selected as the youngest
 
     Returns
     -------
@@ -30,20 +31,24 @@ def YSG(ages, errors, sigma=1):
         errors = [errors]
 
     YSG = []
+    bool_masks = []
 
     for i in range(len(ages)):
-        if sigma == 1: 
-            data_err1s = list(zip(ages[i], errors[i]))
-            data_err1s.sort(key=lambda d: d[0] + d[1]) # Sort based on age + 1s error
-            YSG.append([data_err1s[0][0],data_err1s[0][1]*2]) # Reporting 2-sigma error
-        if sigma == 2:
-            data_err2s = list(zip(ages[i], errors[i]*2))
-            data_err2s.sort(key=lambda d: d[0] + d[1]) # Sort based on age + 2s error
-            YSG.append([data_err2s[0][0],data_err2s[0][1]]) # Reporting 2-sigma error
+        metric = ages[i] + errors[i]*sigma
+        youngest_idx = np.argmin(metric)
 
-    return YSG
+        YSG.append([ages[i][youngest_idx], errors[i][youngest_idx]*2])
+        if return_bool:
+            mask = np.zeros_like(ages[i], dtype=bool)
+            mask[youngest_idx] = True
+            bool_masks.append(mask)
 
-def YC1s(ages, errors, min_cluster_size=2, contiguous=True):
+    if return_bool:
+        return YSG, bool_masks
+    else:
+        return YSG
+
+def YC1s(ages, errors, min_cluster_size=2, contiguous=True, return_bool=False):
     """
     Calculate the youngest grain cluster that overlaps at 1-sigma error (see Dickinson and Gehrels (2009): Earth and Planetary Science Letters and Sharman et al. (2018): The Depositional Record for an explanation).
     Note: The result obtained is dependent on how analyses are sorted and whether a cluster consists of 'contiguous' analyses
@@ -53,11 +58,13 @@ def YC1s(ages, errors, min_cluster_size=2, contiguous=True):
     ages : a 2-D array of ages, len(ages)=number of samples or sample groups
     errors : a 2-D array of 1-sigma errors for each sample or sample group, len(errors)=number of samples or sample groups
     min_cluster_size : (optional) minimum number of grains in the cluster (default = 2)
-    contiguous : bool, set to True to require that analyses in a cluster be adjacent (default = True) 
+    contiguous : bool, set to True to require that analyses in a cluster be adjacent (default = True)
+    return_bool : bool, set to True to return a boolean list that indicates which analyses are included in the calculation (default = False) 
 
     Returns
     -------
     YC1s : a list of [the weighted mean age of the youngest cluster, the 2-sigma uncertainty of the weighted mean age of the youngest cluster, the MSWD of the youngest cluster, the number of analyses in the youngest cluster] such that len(YC1s) = len(ages)
+    in_cluster_unsorted : (optional) a list of boolean values indicating whether the analysis was included in the weighted mean calculation
 
     """
 
@@ -70,21 +77,37 @@ def YC1s(ages, errors, min_cluster_size=2, contiguous=True):
 
     for i in range(len(ages)):
 
-        data_err1s = list(zip(ages[i], errors[i]))
+        data_err1s = list(zip(ages[i], errors[i], range(len(ages[i]))))
         data_err1s.sort(key=lambda d: d[0] + d[1]) # Sort based on age + 1s error
 
-        YC1s_cluster = find_youngest_cluster(data_err1s, min_cluster_size, sort_by='none', contiguous=contiguous)
+        sorted_ages = [d[0] for d in data_err1s]
+        sorted_errors = [d[1] for d in data_err1s]
+        sorted_indices = [d[2] for d in data_err1s]
+
+        if return_bool:
+            YC1s_cluster, in_cluster_sorted = find_youngest_cluster(list(zip(sorted_ages, sorted_errors)), min_cluster_size, sort_by='none', contiguous=contiguous, return_bool=True)
+        else:
+            YC1s_cluster = find_youngest_cluster(list(zip(sorted_ages, sorted_errors)), min_cluster_size, sort_by='none', contiguous=contiguous, return_bool=False)
         YC1s_WM = dFunc.weightedMean(np.array([d[0] for d in YC1s_cluster]), np.array([d[1] for d in YC1s_cluster]))
 
         # Return NaN if YC1s did not find a cluster
         if YC1s_WM[0] == 0.0:
+            if return_bool:
+                in_cluster_unsorted = [False] * len(ages[i])
             YC1s.append([np.nan,np.nan,np.nan,np.nan])
         else:
+            if return_bool:
+                in_cluster_unsorted = [False] * len(ages[i])
+                for sorted_idx, original_idx in enumerate(sorted_indices):
+                    in_cluster_unsorted[original_idx] = in_cluster_sorted[sorted_idx]
             YC1s.append([YC1s_WM[0], YC1s_WM[1], YC1s_WM[2], len(YC1s_cluster)])
 
-    return YC1s
+    if return_bool:
+        return YC1s, in_cluster_unsorted
+    else:
+        return YC1s
 
-def YC2s(ages, errors, min_cluster_size=3, contiguous=True):
+def YC2s(ages, errors, min_cluster_size=3, contiguous=True, return_bool=False):
     """
     Calculate the youngest grain cluster that overlaps at 2-sigma error (see Dickinson and Gehrels (2009): Earth and Planetary Science Letters and Sharman et al. (2018): The Depositional Record for an explanation).
     Note: The result obtained is dependent on how analyses are sorted and whether a cluster consists of 'contiguous' analyses
@@ -95,10 +118,12 @@ def YC2s(ages, errors, min_cluster_size=3, contiguous=True):
     errors : a 2-D array of 1-sigma errors for each sample or sample group, len(errors)=number of samples or sample groups
     min_cluster_size : (optional) minimum number of grains in the cluster (default = 3)
     contiguous : bool, set to True to require that analyses in a cluster be adjacent (default = True)
+    return_bool : bool, set to True to return a boolean list that indicates which analyses are included in the calculation (default = False) 
 
     Returns
     -------
     YC2s : [the weighted mean age of the youngest cluster, the 2-sigma uncertainty of the weighted mean age of the youngest cluster, the MSWD of the youngest cluster, the number of analyses in the youngest cluster] such that len(YC2s) = len(ages)
+    in_cluster_unsorted : (optional) a list of boolean values indicating whether the analysis was included in the weighted mean calculation
 
     """
 
@@ -111,19 +136,35 @@ def YC2s(ages, errors, min_cluster_size=3, contiguous=True):
 
     for i in range(len(ages)):
 
-        data_err2s = list(zip(ages[i], errors[i]*2))
+        data_err2s = list(zip(ages[i], errors[i]*2, range(len(ages[i]))))
         data_err2s.sort(key=lambda d: d[0] + d[1]) # Sort based on age + 2s error
 
-        YC2s_cluster = find_youngest_cluster(data_err2s, min_cluster_size, sort_by='none', contiguous=contiguous)
+        sorted_ages = [d[0] for d in data_err2s]
+        sorted_errors = [d[1] for d in data_err2s]
+        sorted_indices = [d[2] for d in data_err2s]
+
+        if return_bool:
+            YC2s_cluster, in_cluster_sorted = find_youngest_cluster(list(zip(sorted_ages, sorted_errors)), min_cluster_size, sort_by='none', contiguous=contiguous, return_bool=True)
+        else:
+            YC2s_cluster = find_youngest_cluster(list(zip(sorted_ages, sorted_errors)), min_cluster_size, sort_by='none', contiguous=contiguous, return_bool=False)
         YC2s_WM = dFunc.weightedMean(np.array([d[0] for d in YC2s_cluster]), np.array([d[1] for d in YC2s_cluster])/2.)
 
         # Return NaN if YC2s did not find a cluster
         if YC2s_WM[0] == 0.0:
+            if return_bool:
+                in_cluster_unsorted = [False] * len(ages[i])
             YC2s.append([np.nan,np.nan,np.nan,np.nan])
         else:
+            if return_bool:
+                in_cluster_unsorted = [False] * len(ages[i])
+                for sorted_idx, original_idx in enumerate(sorted_indices):
+                    in_cluster_unsorted[original_idx] = in_cluster_sorted[sorted_idx]
             YC2s.append([YC2s_WM[0], YC2s_WM[1], YC2s_WM[2], len(YC2s_cluster)])
 
-    return YC2s
+    if return_bool:
+        return YC2s, in_cluster_unsorted
+    else:
+        return YC2s
 
 def YDZ(ages, errors, iterations=10000, chartOutput = False, bins=25):
     from scipy import stats
@@ -490,10 +531,12 @@ def tauMethod(ages, errors, min_cluster_size=3, thres=0.01, minDist=1, xdif=0.1,
 
 ##### Helper Functions #####
 
-def find_youngest_cluster(data_err, min_cluster_size, sort_by = 'age', contiguous=True):
+def find_youngest_cluster(data_err, min_cluster_size, sort_by = 'age', contiguous=True, return_bool=False):
     """
     Finds the youngest cluster of analyses that overlap within uncertainty
     (updated 6 November 2023)
+    Added an optional boolean return of which analyses are included in the cluster
+    (updated 9 October 2025)
 
     Parameters
     ----------
@@ -505,37 +548,61 @@ def find_youngest_cluster(data_err, min_cluster_size, sort_by = 'age', contiguou
     Returns
     -------
     result : array of tuples, youngest ages & errors of analyses that overlap
+    in_cluster : boolean array (optional), True for values in the cluster of the sorted data
 
     """
     
     if not sort_by in ['age+error','age','none']:
         print('Warning: options for sort_by kwarg are "age+error" or "age". Results may be incorrect.')
-
-    if sort_by == 'age+error':
-        data_err.sort(key=lambda d: d[0] + d[1]) # Sort based on age + error
-    if sort_by == 'age':
-        data_err.sort(key=lambda d: d[0]) # Sort based on age
     
+    # To make it easier to slice
+    data_err = np.array(data_err, dtype=float)
+    
+    # if sort_by == 'age+error':
+    #     data_err.sort(key=lambda d: d[0] + d[1]) # Sort based on age + error
+    # if sort_by == 'age':
+    #     data_err.sort(key=lambda d: d[0]) # Sort based on age
+    if sort_by == 'age+error':
+        sorted_indices = np.argsort(data_err[:, 0] + data_err[:, 1])
+    elif sort_by == 'age':
+        sorted_indices = np.argsort(data_err[:, 0])
+    else:
+        sorted_indices = np.arange(len(data_err))
+    data_err = data_err[sorted_indices]
+
     result = []
     tops = np.asarray(data_err)[:,0]+np.asarray(data_err)[:,1] # Age plus uncertainty
     bottoms = np.asarray(data_err)[:,0]-np.asarray(data_err)[:,1] # Age minus uncertainty
+
+    in_cluster = np.full((len(data_err),), False) # By default all analyses are not in the cluster
 
     for i in range(len(data_err)): # One loop for each analysis
         overlaps = bottoms[i:]<tops[i] # Boolean
         if not contiguous:
             if sum(overlaps) >= min_cluster_size: # Any analysis, regardless of order
                 result = np.asarray(data_err[i:])[overlaps]
+                # mark in_cluster (map back to original indices)
+                overlap_indices = sorted_indices[i:][overlaps]
+                # overlap_indices = [sorted_indices[i+j] for j, val in enumerate(overlaps) if val]
+                in_cluster[overlap_indices] = True
                 break
         else: 
             false_indx = [i for i, x in enumerate(overlaps) if not x] # Returns indexes of False values
             if false_indx == []: # The case of all analyses overlapping or there only being 1 analysis
                 if len(data_err[i:]) >= min_cluster_size: # If all analyses overlap, need to make sure there are enough of them
                     result = np.asarray(data_err[i:])
+                    cluster_indices = sorted_indices[i:]
+                    in_cluster[cluster_indices] = True
                     break
                 else:
                     continue # Keep checking until no more analyses to check
             elif false_indx[0] >= min_cluster_size: # Analyses must be contiguous and overlapping
                 result = np.asarray(data_err[i:(i+false_indx[0])])
+                cluster_indices = sorted_indices[i:(i+false_indx[0])]
+                in_cluster[cluster_indices] = True
                 break
 
-    return result
+    if return_bool:
+        return result, in_cluster
+    else:
+        return result

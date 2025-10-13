@@ -172,7 +172,7 @@ def plotSampleDist(main_byid_df, ID_col = 'Sample_ID', bestAge = 'BestAge', numB
     numSamples = len(main_byid_df[ID_col])
     c = 0 # Counter variable
     for sample in main_byid_df[ID_col]:
-        numGrains[c] = len(main_byid_df.loc[sample,bestAge])
+        numGrains[c] = len(np.atleast_1d(main_byid_df.loc[sample,bestAge])) # Fixes an error if there's just one age
         c += 1
     fig, ax = plt.subplots(1,1)
     ax.hist(list(numGrains), numBins)
@@ -252,12 +252,12 @@ def sampleToData(sampleList, main_byid_df, sampleLabel='Sample_ID', bestAge='Bes
                     print('Function stopped')
                     stop = True
                     break            
-            ages.append(main_byid_df.loc[sample, bestAge])
+            ages.append(np.atleast_1d(main_byid_df.loc[sample, bestAge]))
             if sigma == '2sigma':
-                errors.append(main_byid_df.loc[sample, bestAgeErr]/2.)
+                errors.append(np.atleast_1d(main_byid_df.loc[sample, bestAgeErr]/2.))
             else:
-                errors.append(main_byid_df.loc[sample, bestAgeErr])
-            numGrains.append(len(main_byid_df.loc[sample, bestAge]))
+                errors.append(np.atleast_1d(main_byid_df.loc[sample, bestAgeErr]))
+            numGrains.append(len(np.atleast_1d(main_byid_df.loc[sample, bestAge]))) # Fixes an error if there's only one age
             labels.append(main_byid_df.loc[sample,sampleLabel])
 
     if verify:
@@ -2020,25 +2020,29 @@ def MDAtoCSV(sampleList, ages, errors, numGrains, labels, fileName, sortBy, barW
             data_err1s_ageSort.sort(key=lambda d: d[0]) # Sort based on age
             data_err1s.sort(key=lambda d: d[0] + d[1]) # Sort based on age + 1s error
             data_err2s.sort(key=lambda d: d[0] + d[1]) # Sort based on age + 2s error
-            YSG = data_err1s[0][0]
-            YSG_err1s = data_err1s[0][1]
 
-            YC1s_cluster = MDA.find_youngest_cluster(data_err1s, min_cluster_size=2, sort_by='none', contiguous=True)
-            YC1S_WM = weightedMean(np.array([d[0] for d in YC1s_cluster]), np.array([d[1] for d in YC1s_cluster]))
+            YSG_result = MDA.YSG(ages[i], errors[i], sigma=1, return_bool=False)
+            YSG = YSG_result[0][0]
+            YSG_err1s = YSG_result[0][1]/2. # Because MDA.YSG() returns 2-sigma uncertainties
 
-            YC2s_cluster = MDA.find_youngest_cluster(data_err2s, min_cluster_size=3, sort_by='none', contiguous=True)
-            YC2S_WM = weightedMean(np.array([d[0] for d in YC2s_cluster]), np.array([d[1] for d in YC2s_cluster])/2.)
+            YC1s_cluster = MDA.find_youngest_cluster(data_err1s, min_cluster_size=2, sort_by='none', contiguous=True, return_bool=False)
+            if YC1s_cluster == []: # If calculation did not return a value
+                YC1S_WM = [np.nan, np.nan, np.nan, np.nan]
+            else:
+                YC1S_WM = weightedMean(np.array([d[0] for d in YC1s_cluster]), np.array([d[1] for d in YC1s_cluster]))
+
+            YC2s_cluster = MDA.find_youngest_cluster(data_err2s, min_cluster_size=3, sort_by='none', contiguous=True, return_bool=False)
+            if YC2s_cluster == []: # If calculation did not return a value
+                YC2S_WM = [np.nan, np.nan, np.nan, np.nan]
+            else:
+                YC2S_WM = weightedMean(np.array([d[0] for d in YC2s_cluster]), np.array([d[1] for d in YC2s_cluster])/2.)
 
             writer.writerow((labels[i],numGrains[i], YSG, YSG_err1s, YC1S_WM[0], YC1S_WM[1]/2, YC1S_WM[2], len(YC1s_cluster), YC2S_WM[0], YC2S_WM[1]/2, YC2S_WM[2], len(YC2s_cluster)))
-            
+
             if makePlot:
                 # Specify plot characteristics and axes    
-                if N > 1:
-                    ax_i.set_ylabel("Age (Ma)")
-                    ax_i.get_xaxis().set_ticks([])
-                else:
-                    ax.set_ylabel("Age (Ma)")
-                    ax.get_xaxis().set_ticks([])
+                ax_i.set_ylabel("Age (Ma)")
+                ax_i.get_xaxis().set_ticks([])
                 
                 # Choose which way to sort the ages
                 if sortBy == 'mean':
@@ -2050,14 +2054,17 @@ def MDAtoCSV(sampleList, ages, errors, numGrains, labels, fileName, sortBy, barW
                 
                 # Determine how many grains to plot per sample or sample group
                 toPlot = np.zeros_like(np.empty(shape=(len(ageErrors),1)))
-                YC1S_max = YC1s_cluster[-1][0] + YC1s_cluster[-1][1]
-                YC2S_max = YC2s_cluster[-1][0] + YC2s_cluster[-1][1] 
-                # YC1S_max = data_err1s[YC1S_imax][0]+data_err1s[YC1S_imax][1]
-                # YC2S_max = data_err2s[YC2S_imax][0]+data_err2s[YC2S_imax][1]
-                if YC1S_max >= YC2S_max:
-                    plotMax = YC1S_max
+                YSG_max = YSG + YSG_err1s*2
+                if YC1s_cluster != []:
+                    YC1S_max = YC1s_cluster[-1][0] + YC1s_cluster[-1][1]
                 else:
-                    plotMax = YC2S_max
+                    YC1S_max = 0
+                if YC2s_cluster != []:
+                    YC2S_max = YC2s_cluster[-1][0] + YC2s_cluster[-1][1]
+                else:
+                    YC2S_max = 0
+                plotMax = np.max([YSG_max, YC1S_max, YC2S_max])
+
                 for j in range(len(ageErrors)):
                     if (sortBy == 'mean' or sortBy == '1sigma'):
                         if ageErrors[j][0]+ageErrors[j][1]*2 > plotMax:
@@ -2101,18 +2108,17 @@ def MDAtoCSV(sampleList, ages, errors, numGrains, labels, fileName, sortBy, barW
                         ax_i.bar(x = barx[j], height = height*2, width=barWidth, bottom = ageErrors[j][0]-ageErrors[j][1]*2, color='gray', zorder=9)
                     if sortBy == '2sigma':
                         ax_i.bar(x = barx[j], height = height/2, width=barWidth, bottom = ageErrors[j][0]-ageErrors[j][1]/2, color='black', zorder=10)
-                        ax_i.bar(x = barx[j], height = height, width=barWidth, bottom = ageErrors[j][0]-ageErrors[j][1], color='gray', zorder=9)                    
+                        ax_i.bar(x = barx[j], height = height, width=barWidth, bottom = ageErrors[j][0]-ageErrors[j][1], color='gray', zorder=9)               
                 ax_i.grid(True)
                 xmin, xmax = ax_i.get_xlim()
                 ymin, ymax = ax_i.get_ylim()
                 xdif = xmax-xmin
                 ydif = ymax-ymin
-                ax_i.text(xmin+xdif*0.02, ymax+ydif*0.02, s=labels[i])
-                ax_i.text(xmin+xdif*0.02, ymax+ydif*-0.07, s=("YSG: "+str(round(YSG,1))+"$\pm$"+str(round(YSG_err1s,2))+" Ma"), fontsize='small', backgroundcolor='white')
-                ax_i.text(xmin+xdif*0.02, ymax+ydif*-0.14, s=("YC1"+r'$\sigma$'+"(2+): "+str(round(YC1S_WM[0],1))+"$\pm$"+str(round(YC1S_WM[1]/2,2))+" Ma"), fontsize='small', backgroundcolor='white')
-                ax_i.text(xmin+xdif*0.02, ymax+ydif*-0.21, s=("YC2"+r'$\sigma$'+"(3+): "+str(round(YC2S_WM[0],1))+"$\pm$"+str(round(YC2S_WM[1]/2,2))+" Ma"), fontsize='small', backgroundcolor='white')
-                ax_i.text(xmin+xdif*plotWidth*0.05, ymax+ydif*0.02, s=("Calculated uncertainties are reported at the 1"+r'$\sigma$'+" level"), fontsize='small')
-
+                ax_i.text(xmin+xdif*0.02, ymax+ydif*0.02, s=labels[i], zorder=99)
+                ax_i.text(xmin+xdif*0.02, ymax+ydif*-0.07, s=("YSG: "+str(round(YSG,1))+"$\pm$"+str(round(YSG_err1s,2))+" Ma"), fontsize='small', bbox=dict(edgecolor='white', facecolor='white', alpha=0.9), zorder=99)
+                ax_i.text(xmin+xdif*0.02, ymax+ydif*-0.14, s=("YC1"+r'$\sigma$'+"(2+): "+str(round(YC1S_WM[0],1))+"$\pm$"+str(round(YC1S_WM[1]/2,2))+" Ma"), fontsize='small', bbox=dict(edgecolor='white', facecolor='white', alpha=0.9), zorder=99)
+                ax_i.text(xmin+xdif*0.02, ymax+ydif*-0.21, s=("YC2"+r'$\sigma$'+"(3+): "+str(round(YC2S_WM[0],1))+"$\pm$"+str(round(YC2S_WM[1]/2,2))+" Ma"), fontsize='small', bbox=dict(edgecolor='white', facecolor='white', alpha=0.9), zorder=99)
+                ax_i.text(xmin+xdif*plotWidth*0.05, ymax+ydif*0.02, s=("Calculated uncertainties are reported at the 1"+r'$\sigma$'+" level"), fontsize='small', zorder=99)
         if makePlot:
             return fig
 
