@@ -2026,13 +2026,13 @@ def MDAtoCSV(sampleList, ages, errors, numGrains, labels, fileName, sortBy, barW
             YSG_err1s = YSG_result[0][1]/2. # Because MDA.YSG() returns 2-sigma uncertainties
 
             YC1s_cluster = MDA.find_youngest_cluster(data_err1s, min_cluster_size=2, sort_by='none', contiguous=True, return_bool=False)
-            if YC1s_cluster == []: # If calculation did not return a value
+            if len(YC1s_cluster) == 0: # If calculation did not return a value
                 YC1S_WM = [np.nan, np.nan, np.nan, np.nan]
             else:
                 YC1S_WM = weightedMean(np.array([d[0] for d in YC1s_cluster]), np.array([d[1] for d in YC1s_cluster]))
 
             YC2s_cluster = MDA.find_youngest_cluster(data_err2s, min_cluster_size=3, sort_by='none', contiguous=True, return_bool=False)
-            if YC2s_cluster == []: # If calculation did not return a value
+            if len(YC2s_cluster) == 0: # If calculation did not return a value
                 YC2S_WM = [np.nan, np.nan, np.nan, np.nan]
             else:
                 YC2S_WM = weightedMean(np.array([d[0] for d in YC2s_cluster]), np.array([d[1] for d in YC2s_cluster])/2.)
@@ -2055,11 +2055,11 @@ def MDAtoCSV(sampleList, ages, errors, numGrains, labels, fileName, sortBy, barW
                 # Determine how many grains to plot per sample or sample group
                 toPlot = np.zeros_like(np.empty(shape=(len(ageErrors),1)))
                 YSG_max = YSG + YSG_err1s*2
-                if YC1s_cluster != []:
+                if len(YC1s_cluster) != 0:
                     YC1S_max = YC1s_cluster[-1][0] + YC1s_cluster[-1][1]
                 else:
                     YC1S_max = 0
-                if YC2s_cluster != []:
+                if len(YC2s_cluster) != 0:
                     YC2S_max = YC2s_cluster[-1][0] + YC2s_cluster[-1][1]
                 else:
                     YC2S_max = 0
