@@ -2235,22 +2235,31 @@ class MDS_class:
 
         # Loop through and perform MDS for each number of dimensions considered
         for i in range(max_dim-min_dim+1):
-            if self.metric or self.n_init == 'metric': # Perform metric MDS
-                self.mds = manifold.MDS(n_components = min_dim+i, random_state=1, dissimilarity='precomputed', max_iter= self.max_iter, normalized_stress='auto')
-                self.pos = self.mds.fit(self.matrix).embedding_
-                stress = self.mds.fit(self.matrix).stress_
-                if not self.metric: # Non-metric MDS (metric MDS  used as initial configuration)
-                    self.nmds = manifold.MDS(n_components = min_dim+i, metric=False, random_state=1, dissimilarity='precomputed', n_init = 1, max_iter= self.max_iter, normalized_stress='auto')
-                    self.npos = self.nmds.fit_transform(self.matrix, init=self.pos)
-                    stress = self.nmds.fit(self.matrix, init=self.pos).stress_
-            else: # Non-metric MDS (metric MDS not used as initial configuration)
-                self.nmds = manifold.MDS(n_components = min_dim+i, metric=False, random_state=1, dissimilarity='precomputed', n_init = self.n_init, max_iter= self.max_iter, normalized_stress='auto')
-                self.npos = self.nmds.fit_transform(self.matrix)
-                stress = self.nmds.fit(self.matrix).stress_
-
-            if self.metric:
+            n_components = min_dim+i
+            if self.metric: # Perform metric MDS
+                self.mds = manifold.MDS(
+                    n_components = n_components,
+                    metric=True,
+                    random_state=i+1,
+                    dissimilarity='precomputed',
+                    n_init=self.n_init if isinstance(self.n_init, int) else 4,
+                    max_iter= self.max_iter,
+                    normalized_stress=True
+                )
+                self.pos = self.mds.fit_transform(self.matrix)
+                stress = self.mds.stress_
                 m = self.pos
-            else:
+            else: # Non-metric MDS (metric MDS not used as initial configuration)
+                self.nmds = manifold.MDS(
+                    n_components = n_components,
+                    metric=False,
+                    random_state=i+1,
+                    dissimilarity='precomputed',
+                    n_init = self.n_init if isinstance(self.n_init, int) else 4,
+                    max_iter= self.max_iter,
+                    normalized_stress=True)
+                self.npos = self.nmds.fit_transform(self.matrix)
+                stress = self.nmds.stress_
                 m = self.npos
 
             self.stressArray.append(stress)
