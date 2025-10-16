@@ -419,10 +419,13 @@ def plotAll_1(sampleList, ages, errors, numGrains, labels, whatToPlot, plotCDF, 
     # Calculate the number of grains per sample or sample group plotted
     numGrainsPlotted = np.zeros_like(numGrains)
     for i in range(len(sampleList)):
-        if isinstance(x1, list) == False:
-            numGrainsPlotted[i] = len([elem for elem in ages[i] if (elem < x2 and elem > x1)]) # Number of grains in plot
+        ages_i = np.array(ages[i]) # Ensure a numpy array
+        if not isinstance(x1, list):
+            numGrainsPlotted[i] = np.sum((ages_i > x1) & (ages_i < x2)) 
+            # numGrainsPlotted[i] = len([elem for elem in ages[i] if (elem < x2 and elem > x1)]) # Number of grains in plot
         else:
-            numGrainsPlotted[i] = len([elem for elem in ages[i] if (elem < x2[-1] and elem > x1[0])]) # Number of grains in plot (note that this assumes no gaps in what you are plotting!!!)
+            numGrainsPlotted[i] = np.sum((ages_i > x1[0]) & (ages_i < x2[-1]))
+            # numGrainsPlotted[i] = len([elem for elem in ages[i] if (elem < x2[-1] and elem > x1[0])]) # Number of grains in plot (note that this assumes no gaps in what you are plotting!!!)
         
     # Number of samples per plotted distribution
     N = np.zeros_like(numGrains)
@@ -2021,17 +2024,17 @@ def MDAtoCSV(sampleList, ages, errors, numGrains, labels, fileName, sortBy, barW
             data_err1s.sort(key=lambda d: d[0] + d[1]) # Sort based on age + 1s error
             data_err2s.sort(key=lambda d: d[0] + d[1]) # Sort based on age + 2s error
 
-            YSG_result = MDA.YSG(ages[i], errors[i], sigma=1, return_bool=False)
+            YSG_result = MDA.YSG(ages[i], errors[i], sigma=1)
             YSG = YSG_result[0][0]
             YSG_err1s = YSG_result[0][1]/2. # Because MDA.YSG() returns 2-sigma uncertainties
 
-            YC1s_cluster = MDA.find_youngest_cluster(data_err1s, min_cluster_size=2, sort_by='none', contiguous=True, return_bool=False)
+            YC1s_cluster = MDA.find_youngest_cluster(data_err1s, min_cluster_size=2, sort_by='none', contiguous=True)
             if len(YC1s_cluster) == 0: # If calculation did not return a value
                 YC1S_WM = [np.nan, np.nan, np.nan, np.nan]
             else:
                 YC1S_WM = weightedMean(np.array([d[0] for d in YC1s_cluster]), np.array([d[1] for d in YC1s_cluster]))
 
-            YC2s_cluster = MDA.find_youngest_cluster(data_err2s, min_cluster_size=3, sort_by='none', contiguous=True, return_bool=False)
+            YC2s_cluster = MDA.find_youngest_cluster(data_err2s, min_cluster_size=3, sort_by='none', contiguous=True)
             if len(YC2s_cluster) == 0: # If calculation did not return a value
                 YC2S_WM = [np.nan, np.nan, np.nan, np.nan]
             else:
@@ -2125,6 +2128,8 @@ def MDAtoCSV(sampleList, ages, errors, numGrains, labels, fileName, sortBy, barW
 class MDS_class:
     """
     This is a class that computes multidimensional scaling (MDS) for distributive data (e.g., detrital zircon U-Pb age distributions)
+    Note: Initialization of non-metric MDS with metric MDS positions is no longer supported as of v1.4.6 due to changes in the
+    behavior of sklearn.manifold.MDS.
 
     Required Parameters
     ----------
@@ -2155,7 +2160,7 @@ class MDS_class:
     See Vermeesch (2013): Chemical Geology (https://doi.org/10.1016/j.chemgeo.2013.01.010) and the documentation of sklearn.manifold.MDS for more information on multidimensional scaling
 
     """
-    def __init__(self, ages, errors, labels, sampleList, metric=False, criteria='Vmax', bw='optimizedFixed', n_init='metric', max_iter=1000, x1=0, x2=4500, xdif=1, min_dim=1, max_dim=3, dim=2, bw_x=None):
+    def __init__(self, ages, errors, labels, sampleList, metric=False, criteria='Vmax', bw='optimizedFixed', n_init=4, max_iter=1000, x1=0, x2=4500, xdif=1, min_dim=1, max_dim=3, dim=2, bw_x=None, normalized_stress='auto'):
         # Import required modules
         from scipy import stats
         from sklearn import manifold
@@ -2170,6 +2175,7 @@ class MDS_class:
         self.bw = bw
         self.n_init = n_init
         self.max_iter = max_iter
+        self.normalized_stress = normalized_stress
 
         # Generate sample labels for plotting
         if type(self.sampleList[0])==tuple:
@@ -2244,7 +2250,7 @@ class MDS_class:
                     dissimilarity='precomputed',
                     n_init=self.n_init if isinstance(self.n_init, int) else 4,
                     max_iter= self.max_iter,
-                    normalized_stress=True
+                    normalized_stress=normalized_stress
                 )
                 self.pos = self.mds.fit_transform(self.matrix)
                 stress = self.mds.stress_
@@ -2257,7 +2263,7 @@ class MDS_class:
                     dissimilarity='precomputed',
                     n_init = self.n_init if isinstance(self.n_init, int) else 4,
                     max_iter= self.max_iter,
-                    normalized_stress=True)
+                    normalized_stress=normalized_stress)
                 self.npos = self.nmds.fit_transform(self.matrix)
                 stress = self.nmds.stress_
                 m = self.npos
