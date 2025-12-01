@@ -2056,7 +2056,8 @@ def MDAtoCSV(sampleList, ages, errors, numGrains, labels, fileName, sortBy, barW
                     ageErrors = data_err2s
                 
                 # Determine how many grains to plot per sample or sample group
-                toPlot = np.zeros_like(np.empty(shape=(len(ageErrors),1)))
+                # toPlot = np.zeros_like(np.empty(shape=(len(ageErrors),1)))
+                toPlot = np.zeros((len(ageErrors),1))
                 YSG_max = YSG + YSG_err1s*2
                 if len(YC1s_cluster) != 0:
                     YC1S_max = YC1s_cluster[-1][0] + YC1s_cluster[-1][1]
