@@ -6,7 +6,7 @@ with open('README.md', "r") as fh:
 setuptools.setup(
     name="detritalpy",
     packages=['detritalpy'],    
-    version="1.4.7",
+    version="1.4.8",
     author="Glenn Sharman",
     author_email="gsharman@uark.edu",
     description="A Python-based toolset for visualizing and analyzing detrital geo-thermochronologic data",
@@ -14,11 +14,11 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/grsharman/detritalpy",
-    download_url="https://github.com/grsharman/detritalPy/archive/v1.4.7.tar.gz",
+    download_url="https://github.com/grsharman/detritalPy/archive/v1.4.8.tar.gz",
     install_requires=['numpy','matplotlib>=3.8','matplotlib-inline>=0.1.6',
     'ipykernel>=6.0','pandas','xlrd','folium','vincent','simplekml','scipy',
     'scikit-learn','kdepy','peakutils','openpyxl','xlsxwriter'],
-    license=['Apache License 2.0'],
+    license='Apache License 2.0',
     python_requires='>=3.8',
     classifiers=[
         "Programming Language :: Python :: 3",
