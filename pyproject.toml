@@ -49,4 +49,3 @@ classifiers = [
 
 [project.urls]
 Homepage = "https://github.com/grsharman/detritalpy"
-Download = "https://github.com/grsharman/detritalPy/archive/v1.4.8.tar.gz"
