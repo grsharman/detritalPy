@@ -10,7 +10,7 @@ Created on Sat Feb 18 07:43:18 2017
 # Import required modules
 ###############################################################
 
-import detritalpy.MDAfuncs as MDA
+import detritalPy.MDAfuncs as MDA
 import numpy as np
 import matplotlib.pyplot as plt
 import pathlib
