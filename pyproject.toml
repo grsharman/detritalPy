@@ -24,6 +24,7 @@ keywords = [
 dependencies = [
     "folium>=0.18.0",
     "ipykernel>=6.29.5",
+    "jupyterlab>=4.5.1",
     "kdepy>=1.1.12",
     "matplotlib>=3.7.5",
     "matplotlib-inline>=0.1.7",
