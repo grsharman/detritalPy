@@ -10,7 +10,7 @@ name = "detritalpy"
 description = "A Python-based toolset for visualizing and analyzing detrital geo-thermochronologic data"
 version = "1.4.8"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 authors = [{ name = "Glenn Sharman", email = "gsharman@uark.edu" }]
 license = { "file" = "LICENSE" }
 keywords = [
