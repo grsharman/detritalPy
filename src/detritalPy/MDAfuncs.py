@@ -2,7 +2,7 @@
 # Maximum depositional age calculations from Sharman and Malkowski: 2020: Earth-Science Reviews (doi.org/10.1016/j.earscirev.2020.103109)
 #########################################################################################################################################   
 
-import detritalpy.detritalFuncs as dFunc
+import detritalPy.detritalFuncs as dFunc
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd

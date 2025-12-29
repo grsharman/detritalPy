@@ -2,7 +2,7 @@
 # Import required modules
 ###############################################################
 
-from detritalpy import detritalFuncs as dFunc # Working with detrital geochron data
+from detritalPy import detritalFuncs as dFunc # Working with detrital geochron data
 import numpy as np # For efficient manipulation of arrays of numbers
 from matplotlib import pyplot as plt # For making plots
 import pandas as pd # For working with pandas dataframes/ loading data
