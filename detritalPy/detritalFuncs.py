@@ -2161,7 +2161,7 @@ class MDS_class:
     See Vermeesch (2013): Chemical Geology (https://doi.org/10.1016/j.chemgeo.2013.01.010) and the documentation of sklearn.manifold.MDS for more information on multidimensional scaling
 
     """
-    def __init__(self, ages, errors, labels, sampleList, metric=False, criteria='Vmax', bw='optimizedFixed', n_init=4, max_iter=1000, x1=0, x2=4500, xdif=1, min_dim=1, max_dim=3, dim=2, bw_x=None, normalized_stress='auto'):
+    def __init__(self, ages, errors, labels, sampleList, metric=False, criteria='Vmax', bw='optimizedFixed', n_init=100, max_iter=1000, x1=0, x2=4500, xdif=1, min_dim=1, max_dim=3, dim=2, bw_x=None, normalized_stress='auto'):
         # Import required modules
         from scipy import stats
         from sklearn import manifold
@@ -2249,7 +2249,7 @@ class MDS_class:
                     metric=True,
                     random_state=i+1,
                     dissimilarity='precomputed',
-                    n_init=self.n_init if isinstance(self.n_init, int) else 4,
+                    n_init=self.n_init if isinstance(self.n_init, int) else 100,
                     max_iter= self.max_iter,
                     normalized_stress=normalized_stress
                 )
@@ -2262,7 +2262,7 @@ class MDS_class:
                     metric=False,
                     random_state=i+1,
                     dissimilarity='precomputed',
-                    n_init = self.n_init if isinstance(self.n_init, int) else 4,
+                    n_init = self.n_init if isinstance(self.n_init, int) else 100,
                     max_iter= self.max_iter,
                     normalized_stress=normalized_stress)
                 self.npos = self.nmds.fit_transform(self.matrix)
@@ -2290,16 +2290,6 @@ class MDS_class:
                         self.x_dissimilarity.append(self.matrix[i,j])
             self.y_distancesArray.append(self.y_distances)
             self.x_dissimilarityArray.append(self.x_dissimilarity)
-
-            # Calculate the Stress-1 of Kruskal (1964) following Vermeesch (2013): Chemical Geology
-            # As of v.1.3.18, Stress-1 is no longer calculated
-            #for i in range(len(self.x_dissimilarity)):
-            #    S1_numerator = []
-            #    S1_denominator = []
-            #    for j in range(len(self.x_dissimilarity)):
-            #        S1_numerator.append(((self.x_dissimilarity[j]-self.y_distances[j])**2))
-            #        S1_denominator.append(self.y_distances[j]**2)
-            #self.stress1Array.append(np.sqrt(np.sum(S1_numerator)/np.sum(S1_denominator)))
 
     def QQplot(self, figsize=(12,12), savePlot=True, fileName='QQplot.pdf', halfMatrix=True):
         """
@@ -2872,7 +2862,7 @@ def plotDoubleDating(main_byid_df, sampleList, x1, x2, y1, y2, plotKDE, colorKDE
                         PDP_agePart = np.arange(xage1, xage1+len(PDPpart), xdif)
                         axsPDP.fill_between(PDP_agePart, 0, PDPpart, alpha = 1, color=agebinsc[j])
         if plotKDE:
-            xKDE =  KDEcalcAges(ages=x, xdif=xdif, bw=bw, bw_x=None)
+            xKDE =  KDEcalcAges(ages=[xF], xdif=xdif, bw=bw, bw_x=None)
             axsKDE = axs['1,0'].twinx()
             axsKDE.plot(xKDE[0],xKDE[1][0], color='black', lw=1)
             axsKDE.set_xlim(x1, x2)
@@ -3337,10 +3327,11 @@ def PDPcalcAges(ages, errors, x1=0, x2=4500, xdif=1, cumulative=False):
             age = data[j]
             error = data_err[j]
             pdf = norm.pdf(PDP_age, age, error)
-            pdf_cum = pdf_cum + pdf 
-        pdf_cum = np.around(pdf_cum/np.trapz(pdf_cum), decimals=10)
+            pdf_cum = pdf_cum + pdf
+        # pdf_cum = np.around(pdf_cum/np.trapz(pdf_cum), decimals=10)
+        pdf_cum = np.around(pdf_cum/np.sum(pdf_cum), decimals=10)
         if cumulative:
-            pdf_cum = np.cumsum(pdf_cum)        
+            pdf_cum = np.cumsum(pdf_cum)
         PDP[i] = pdf_cum
     PDP_age = PDP_age[int(x1/xdif):int((x2+xdif)/xdif)] # Only select the values within the specified plotting age range
     PDPportionRange = np.arange(x1, x2+xdif, xdif)

@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=69", "setuptools_scm[toml]>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "detritalpy"
+dynamic = ["version"]
+
+description = "A Python-based toolset for visualizing and analyzing detrital geo-thermochronologic data"
+readme = "README.md"
+requires-python = ">=3.8"
+
+authors = [
+  {name = "Glenn Sharman", email = "gsharman@uark.edu"}
+]
+
+license = {text = "Apache License 2.0"}
+
+keywords = [
+  "detrital",
+  "zircon",
+  "provenance",
+  "stratigraphy",
+  "geochronology",
+  "thermochronology"
+]
+
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent"
+]
+
+dependencies = [
+  "numpy",
+  "matplotlib>=3.8",
+  "matplotlib-inline>=0.1.6",
+  "ipykernel>=6.0",
+  "pandas",
+  "xlrd",
+  "folium",
+  "vincent",
+  "simplekml",
+  "scipy",
+  "scikit-learn>=1.7",
+  "kdepy",
+  "peakutils",
+  "openpyxl",
+  "xlsxwriter"
+]
+
+[project.urls]
+Homepage = "https://github.com/grsharman/detritalpy"
+Repository = "https://github.com/grsharman/detritalpy"
+
+[tool.setuptools.packages.find]
+where = ["."]
