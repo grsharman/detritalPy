@@ -4,3 +4,4 @@ detritalpy.egg-info
 dist
 **_test.ipynb
 **-checkpoint.ipynb
+detritalpy/_version.py
