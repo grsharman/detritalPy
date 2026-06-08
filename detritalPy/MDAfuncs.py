@@ -7,6 +7,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import pathlib
+from scipy.optimize import curve_fit
+from scipy.signal import find_peaks
 
 def YSG(ages, errors, sigma=1, return_bool=False):
     """
@@ -334,11 +336,9 @@ def YPP(ages, errors, min_cluster_size=2, thres=0.01, minDist=1, xdif=0.1):
 
     Returns
     -------
-    YPP : [the age of the youngest graphical peak, rounded to the nearest 0.1 Ma]
+    YPP : [the age of the youngest graphical peak]
 
     """
-
-
 
     import peakutils
 
@@ -355,18 +355,26 @@ def YPP(ages, errors, min_cluster_size=2, thres=0.01, minDist=1, xdif=0.1):
 
         # Calculate peak indexes
         indexes = list(peakutils.indexes(PDP[i], thres=thres, min_dist=minDist))
+        
+        # Refine peak positions using Gaussian interpolation
+        try:
+            refined_peak_ages = peakutils.interpolate(PDP_age, PDP[i], ind=np.array(indexes))
+        except Exception:
+            # Fall back to grid positions if interpolation fails
+            refined_peak_ages = PDP_age[indexes]
+
         # Peak ages
         peakAges = PDP_age[indexes]
         # Number of grains per peak
         peakAgeGrain = dFunc.peakAgesGrains([peakAges], [ages[i]], [errors[i]])[0]
         # Zip peak ages and grains per peak
-        peakAgesGrains = list(zip(peakAges, peakAgeGrain))
+        peakAgesGrains = list(zip(refined_peak_ages, peakAgeGrain))
         # Filter out peaks with less than min_cluster_size grains
         peakAgesGrainsFiltered = list(filter(lambda x: x[1] >= min_cluster_size, peakAgesGrains))
 
         # Check if a YPP was found, and if not return NaN
         if len(peakAgesGrainsFiltered) > 0:
-            YPP.append(np.round(np.min([x[0] for x in peakAgesGrainsFiltered]),1))
+            YPP.append(float(np.min([x[0] for x in peakAgesGrainsFiltered])))
         else:
             YPP.append(np.nan)
 
@@ -529,6 +537,85 @@ def tauMethod(ages, errors, min_cluster_size=3, thres=0.01, minDist=1, xdif=0.1,
 
     return tauMethod
 
+def YGF(ages, errors, n_points=3, xdif=0.1):
+    """
+    Note: This function is being tested. Use with caution.
+    
+    Calculates the Youngest Gaussian Fit (YGF) for each sample or sample
+    group.  The method fits a Gaussian to the youngest mode of the
+    Probability Density Plot (PDP), using the portion of the PDP bounded
+    by the inflection points flanking that mode — following Saylor et al.
+    (2023): Earth and Planetary Science Letters
+
+        "...the mean and standard deviation of a Gaussian curve fit to the
+        youngest PDP age mode.  The Gaussian curve was fit to the portion
+        of the PDP that included the youngest inflection point."
+
+    For each sample the function:
+      1. Computes the PDP via dFunc.PDPcalcAges.
+      2. Detects local peaks (modes), sorted youngest → oldest.
+      3. For the youngest peak, locates the flanking inflection points
+         (sign changes of the second derivative of the PDP).
+      4. Fits A * exp(-0.5 * ((x - mu) / sigma)^2) to that segment.
+      5. Counts how many ages fall within [mu - 2*sigma, mu + 2*sigma].
+      6. Accepts the fit if count >= n_points; otherwise tries the next-
+         youngest peak.  Returns NaN if no peak satisfies the criterion.
+
+    This function has been modified from an output from Claude (June,
+    2026).
+
+    Parameters
+    ----------
+    ages : list of array-like
+        2-D list of ages; len(ages) = number of samples or sample groups.
+    errors : list of array-like
+        2-D list of 1-sigma uncertainties, same shape as ages.
+    n_points : int, optional
+        Minimum number of analyses that must fall within [mu - 2σ, mu + 2σ]
+        of the fitted Gaussian for the fit to be accepted.  Default = 3.
+    xdif : float, optional
+        Bin size (Ma) used to compute the PDP.  Default = 0.1.
+
+    Returns
+    -------
+    YGF : a list of [Gaussian mean age (Ma), Gaussian 2-sigma (Myr), number of data points contained
+        within the Gaussian] or NaN if no valid fit was found.
+    YGF_info : list of dict
+        For each sample: diagnostic dict with keys
+            'mu'           : Gaussian mean (Ma)
+            'sigma'        : Gaussian 1-sigma (Ma)
+            'two_sigma'    : 2 * sigma (Ma)
+            'amplitude'    : fitted Gaussian amplitude
+            'n_contained'  : number of ages within [mu - 2σ, mu + 2σ]
+            'fit_lo'       : lower age bound of the fit segment
+            'fit_hi'       : upper age bound of the fit segment
+            'gaussian_pdf' : fitted Gaussian evaluated on PDP_age axis
+            'PDP_age'      : age axis used for the PDP
+            'PDP'          : PDP values for this sample
+        All values are NaN / empty if no valid fit was found.
+    """
+    # Allow a single sample passed as a plain list/array
+    if not hasattr(ages[0], '__len__'):
+        ages   = [ages]
+        errors = [errors]
+
+    # Compute PDPs for all samples at once
+    PDP_age, PDP_all = dFunc.PDPcalcAges(ages, errors, xdif=xdif)
+
+    YGF = []
+    YGF_info = []
+
+    for i in range(len(ages)):
+        sample_ages = np.asarray(ages[i],   dtype=float)
+        pdf         = np.asarray(PDP_all[i], dtype=float)
+        age_axis    = np.asarray(PDP_age,    dtype=float)
+
+        result = _fit_youngest_gaussian(age_axis, pdf, sample_ages, n_points)
+        YGF.append(result[0:3]) # mean, 2-sigma, n_contained
+        YGF_info.append(result[3]) # dictionary
+
+    return YGF, YGF_info
+
 ##### Helper Functions #####
 
 def find_youngest_cluster(data_err, min_cluster_size, sort_by = 'age', contiguous=True, return_bool=False):
@@ -606,3 +693,101 @@ def find_youngest_cluster(data_err, min_cluster_size, sort_by = 'age', contiguou
         return result, in_cluster
     else:
         return result
+
+def _fit_youngest_gaussian(age_axis, pdf, sample_ages, n_points):
+    """
+    Core fitting routine for a single sample.  Returns (mean, two_sigma, number of contained points,
+    and info_dict).
+    returned values are NaN and info_dict is sparse if no valid fit is found.
+    """
+    _nan_result = (
+        float('nan'),
+        float('nan'),
+        float('nan'),
+        dict(mu=float('nan'), sigma=float('nan'), two_sigma=float('nan'),
+             amplitude=float('nan'), n_contained=0,
+             fit_lo=float('nan'), fit_hi=float('nan'),
+             gaussian_pdf=np.full_like(age_axis, np.nan),
+             PDP_age=age_axis, PDP=pdf),
+    )
+
+    # Second derivative for inflection-point detection
+    d2 = np.gradient(np.gradient(pdf, age_axis), age_axis)
+
+    def inflection_bounds(peak_idx):
+        """
+        Nearest inflection points (sign changes of d2) left and right of
+        peak_idx.  Falls back to array edges if none found.
+        """
+        lo_idx = 0
+        for k in range(peak_idx - 1, 0, -1):
+            if d2[k] * d2[k - 1] <= 0:
+                lo_idx = k
+                break
+
+        hi_idx = len(age_axis) - 1
+        for k in range(peak_idx + 1, len(age_axis) - 1):
+            if d2[k] * d2[k + 1] <= 0:
+                hi_idx = k
+                break
+
+        return lo_idx, hi_idx
+
+    def gaussian_func(x, amplitude, mu, sigma):
+        return amplitude * np.exp(-0.5 * ((x - mu) / sigma) ** 2)
+
+    # Detect peaks, youngest first
+    peak_idx, _ = find_peaks(pdf, height=pdf.max() * 0.01)
+    if len(peak_idx) == 0:
+        peak_idx = np.array([np.argmax(pdf)])
+    peak_idx = peak_idx[np.argsort(age_axis[peak_idx])]  # youngest first
+
+    for pidx in peak_idx:
+        lo_idx, hi_idx = inflection_bounds(pidx)
+
+        if hi_idx - lo_idx < 2:
+            continue
+
+        seg_ages = age_axis[lo_idx : hi_idx + 1]
+        seg_pdf  = pdf[lo_idx : hi_idx + 1]
+        mu_guess    = age_axis[pidx]
+        sigma_guess = (age_axis[hi_idx] - age_axis[lo_idx]) / 2.0
+
+        try:
+            popt, _ = curve_fit(
+                gaussian_func, seg_ages, seg_pdf,
+                p0=[seg_pdf.max(), mu_guess, sigma_guess],
+                bounds=([0, age_axis[0], 1e-6],
+                        [np.inf, age_axis[-1], age_axis[-1] - age_axis[0]]),
+                maxfev=10000,
+            )
+        except RuntimeError:
+            continue
+
+        amplitude, mu, sigma = popt
+
+        n_contained = int(np.sum(
+            (sample_ages >= mu - 2.0 * sigma) &
+            (sample_ages <= mu + 2.0 * sigma)
+        ))
+
+        if n_contained < n_points:
+            continue
+
+        gauss_full = gaussian_func(age_axis, amplitude, mu, sigma)
+
+        info = dict(
+            mu           = float(mu),
+            sigma        = float(sigma),
+            two_sigma    = float(2.0 * sigma),
+            amplitude    = float(amplitude),
+            n_contained  = n_contained,
+            fit_lo       = float(age_axis[lo_idx]),
+            fit_hi       = float(age_axis[hi_idx]),
+            gaussian_pdf = gauss_full,
+            PDP_age      = age_axis,
+            PDP          = pdf,
+        )
+        return float(mu), float(2.0 * sigma), n_contained, info
+
+    return _nan_result

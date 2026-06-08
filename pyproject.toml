@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=69", "setuptools_scm[toml]>=8"]
+requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "detritalpy"
-dynamic = ["version"]
+version = "1.4.14"
 
 description = "A Python-based toolset for visualizing and analyzing detrital geo-thermochronologic data"
 readme = "README.md"
@@ -54,10 +54,5 @@ dependencies = [
 Homepage = "https://github.com/grsharman/detritalpy"
 Repository = "https://github.com/grsharman/detritalpy"
 
-[tool.setuptools.packages.find]
-where = ["."]
-
-[tool.setuptools_scm]
-write_to = "detritalpy/_version.py"
-version_scheme = "guess-next-dev"
-local_scheme = "node-and-date"
+[tool.setuptools]
+packages = ["detritalpy"]
