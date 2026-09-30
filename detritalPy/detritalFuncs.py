@@ -15,6 +15,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import matplotlib.cm as cmx
+import inspect
 import pathlib
 import pandas as pd
 from scipy.interpolate import interp1d
@@ -1746,6 +1747,23 @@ def plotFoliumMap(sampleList, main_byid_df, ages, errors, numGrains, plotMapKDE,
     """ 
     import bisect
     import folium # Must be installed: pip install folium
+    import importlib.util
+    import sys
+    import types
+
+    # Vincent still imports pkg_resources, which was removed from setuptools 82.
+    # Supply the one API Vincent uses via the standard library when necessary.
+    if 'pkg_resources' not in sys.modules and importlib.util.find_spec('pkg_resources') is None:
+        from importlib.resources import files
+
+        pkg_resources_compat = types.ModuleType('pkg_resources')
+
+        def resource_string(package, resource):
+            return files(package).joinpath(resource).read_bytes()
+
+        pkg_resources_compat.resource_string = resource_string
+        sys.modules['pkg_resources'] = pkg_resources_compat
+
     import vincent # Must be installed: pip install vincent
     import simplekml # Must be installed: pip install simplekml
 
@@ -1755,7 +1773,7 @@ def plotFoliumMap(sampleList, main_byid_df, ages, errors, numGrains, plotMapKDE,
     if exportKML:
         kml = simplekml.Kml()
         style = simplekml.Style()
-        style.iconstyle.icon.href = 'http://maps.google.com/mapfiles/kml/shapes/placemark_circle_highlight.png'
+        style.iconstyle.icon.href = 'https://maps.google.com/mapfiles/kml/shapes/placemark_circle_highlight.png'
     
     # Find information about the spatial extent (lat/long) of the dataset
     if type(sampleList[0])==tuple:
@@ -1836,30 +1854,23 @@ def plotFoliumMap(sampleList, main_byid_df, ages, errors, numGrains, plotMapKDE,
         latlong_zoom_start = long_zoom_start
 
     # Basemap options
+    url_base = 'https://server.arcgisonline.com/ArcGIS/rest/services/'
     if mapType == 'NatGeo_World_Map':
-        url_base = 'http://server.arcgisonline.com/ArcGIS/rest/services/'
         service = 'NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}'
     if mapType == 'World_Street_Map':
-        url_base = 'http://server.arcgisonline.com/ArcGIS/rest/services/'
         service = 'World_Street_Map/MapServer/tile/{z}/{y}/{x}'
     if mapType == 'World_Topo_Map':
-        url_base = 'http://server.arcgisonline.com/ArcGIS/rest/services/'
         service = 'World_Topo_Map/MapServer/tile/{z}/{y}/{x}'        
     if mapType == 'Ocean_Basemap':
-        url_base = 'http://server.arcgisonline.com/ArcGIS/rest/services//'
         service = 'Ocean_Basemap/MapServer/tile/{z}/{y}/{x}'
     if mapType == 'World_Physical_Map':
-        url_base = 'http://server.arcgisonline.com/ArcGIS/rest/services//'
         service = 'World_Physical_Map/MapServer/tile/{z}/{y}/{x}'        
     if mapType == 'World_Shaded_Relief':
-        url_base = 'http://server.arcgisonline.com/ArcGIS/rest/services//'
         service = 'World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}'        
     if mapType == 'World_Terrain_Base':
-        url_base = 'http://server.arcgisonline.com/ArcGIS/rest/services//'
         service = 'World_Terrain_Base/MapServer/tile/{z}/{y}/{x}'
     if mapType == 'World_Hillshade':
-        url_base = 'http://server.arcgisonline.com/ArcGIS/rest/services/Elevation//'
-        service = 'World_Hillshade/MapServer/tile/{z}/{y}/{x}'        
+        service = 'Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}'
           
     tileset = url_base + service
 
@@ -2247,18 +2258,35 @@ class MDS_class:
         self.x_dissimilarityArray = []
         #self.stress1Array = []
 
+        # scikit-learn 1.8 renamed the boolean ``metric`` argument to
+        # ``metric_mds`` and repurposed ``metric`` for the input distance
+        # metric. Keep compatibility with the minimum supported version (1.7)
+        # while using the new API when it is available. Explicitly retain the
+        # historical random initialization so results do not change when the
+        # scikit-learn default changes in 1.10.
+        if 'metric_mds' in inspect.signature(manifold.MDS).parameters:
+            mds_api_kwargs = {
+                'metric_mds': self.metric,
+                'metric': 'precomputed',
+                'init': 'random'
+            }
+        else:
+            mds_api_kwargs = {
+                'metric': self.metric,
+                'dissimilarity': 'precomputed'
+            }
+
         # Loop through and perform MDS for each number of dimensions considered
         for i in range(max_dim-min_dim+1):
             n_components = min_dim+i
             if self.metric: # Perform metric MDS
                 self.mds = manifold.MDS(
                     n_components = n_components,
-                    metric=True,
                     random_state=i+1,
-                    dissimilarity='precomputed',
                     n_init=self.n_init if isinstance(self.n_init, int) else 100,
                     max_iter= self.max_iter,
-                    normalized_stress=normalized_stress
+                    normalized_stress=normalized_stress,
+                    **mds_api_kwargs
                 )
                 self.pos = self.mds.fit_transform(self.matrix)
                 stress = self.mds.stress_
@@ -2266,12 +2294,11 @@ class MDS_class:
             else: # Non-metric MDS (metric MDS not used as initial configuration)
                 self.nmds = manifold.MDS(
                     n_components = n_components,
-                    metric=False,
                     random_state=i+1,
-                    dissimilarity='precomputed',
                     n_init = self.n_init if isinstance(self.n_init, int) else 100,
                     max_iter= self.max_iter,
-                    normalized_stress=normalized_stress)
+                    normalized_stress=normalized_stress,
+                    **mds_api_kwargs)
                 self.npos = self.nmds.fit_transform(self.matrix)
                 stress = self.nmds.stress_
                 m = self.npos

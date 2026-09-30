@@ -452,7 +452,7 @@ def plot_reconstr_error(modelRecstErr, plot_width=8.0, plot_height=3.0):
 
 
 def plot_end_members(H, xAge, EMs_min, EMs_max, x_min=0, x_max=4000, plotLog=False, 
-	plot_width_multiplier=1.0, plot_height_multiplier=1.0, c=2.0, w=3.0, agebins=None, agebinsc=None,
+	plot_width_multiplier=1.0, plot_height_multiplier=1.0, c=2, w=3.0, agebins=None, agebinsc=None,
 	EMcolors='Default', colorByAge=False, fillBetween=True):
 
 	"""
@@ -511,7 +511,7 @@ def plot_end_members(H, xAge, EMs_min, EMs_max, x_min=0, x_max=4000, plotLog=Fal
 	if type(EMcolors) == str:
 		EMcolors = [EMcolors] * int(EMs_max)
 
-	EMlabels = ['EM'+str(x) for x in np.arange(EMs_min,EMs_max+1, 1)]
+	EMlabels = ['EM'+str(x) for x in np.arange(1,EMs_max+1, 1)]
 
 	fig = plt.figure(figsize=(plot_width_multiplier*(EMs_max-EMs_min+1)*w,plot_height_multiplier*c+(EMs_max)))
 
@@ -542,7 +542,7 @@ def plot_end_members(H, xAge, EMs_min, EMs_max, x_min=0, x_max=4000, plotLog=Fal
 		ax.set_xlim(x_min,x_max)
 		ax.set_ylim(0,1.)
 		for ax_j, j in enumerate(range(len(H[i]))): # One loop for each end-member in each scenario
-			ax.plot(xAge, np.cumsum(H[i][j])/np.sum(H[i][j]), lw=2, color=EMcolors[ax_j], label = EMlabels[0:j+1][-1])
+			ax.plot(xAge, np.cumsum(H[i][j])/np.sum(H[i][j]), lw=2, color=EMcolors[ax_j], label=EMlabels[j])
 			if plotLog:
 				ax.set_xscale('log')
 			ax.get_xaxis().set_ticks([])
@@ -853,7 +853,11 @@ def SSR(x, y):
 
 	# To supress rank warning because regression is poorly conditioned
 	import warnings
-	warnings.simplefilter('ignore', np.RankWarning)
+	try:
+		rank_warning = np.exceptions.RankWarning  # NumPy >= 1.25
+	except AttributeError:
+		rank_warning = np.RankWarning  # NumPy < 1.25
+	warnings.simplefilter('ignore', rank_warning)
 
 	gxr_slope = []
 	gxr_yint = []
