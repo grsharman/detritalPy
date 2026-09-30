@@ -1859,6 +1859,7 @@ def plotFoliumMap(sampleList, main_byid_df, ages, errors, numGrains, plotMapKDE,
         'NatGeo_World_Map': ('NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}', 'National Geographic World Map'),
         'World_Street_Map': ('World_Street_Map/MapServer/tile/{z}/{y}/{x}', 'World Street Map'),
         'World_Topo_Map': ('World_Topo_Map/MapServer/tile/{z}/{y}/{x}', 'World Topographic Map'),
+        'World_Light_Gray': ('Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', 'World Light Gray Base'),
         'Ocean_Basemap': ('Ocean_Basemap/MapServer/tile/{z}/{y}/{x}', 'Ocean Basemap'),
         'World_Physical_Map': ('World_Physical_Map/MapServer/tile/{z}/{y}/{x}', 'World Physical Map'),
         'World_Shaded_Relief': ('World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}', 'World Shaded Relief'),
@@ -2665,7 +2666,148 @@ class MDS_class:
             #print('Final stress: ',self.stress1Array[self.dim-self.min_dim])
         if stressType == 'sklearn' or stressType == 'Stress-1':
             print('Final stress: ',self.stressArray[self.dim-self.min_dim])
-    
+
+def MDS(ages, errors, labels, sampleList, metric=False, plotWidth='10', plotHeight='8', plotPie=False, pieSize=0.05, agebins=None, agebinsc=None, criteria='Dmax', bw='optimizedFixed', bw_x=None, color='Default', main_byid_df=None, plotLabels=True, colors='Default'):
+    """
+    Create a multi-dimensional scaling (MDS) plot for individual samples or groups of samples.
+
+    Parameters
+    ----------
+    ages : array of ages for each sample or sample group. Output from sampleToData()
+    labels : array of labels for each sample or sample group. Output from sampleToData()
+    sampleList : array of sample IDs.
+        Must be in form for individual samples: ['Sample1', 'Sample2', . . . , etc.].
+        Must be in the form for groups of samples: [(['Sample1','Sample2', . . . , etc.], 'Group 1 name'),
+                                                    (['Sample1','Sample2', . . . , etc.], 'Group 2 name')]
+    metric : set to False for non-metric MDS
+    plotWidth : specify the width of the plot
+    plotHeight : specify the height of the plot
+    plotPie : set to True to plot data points as pies
+    pieSize : specify the size of pie plots
+    agebins : array of bin edges in Myr. Format option 1: [age1, age2, age3, etc.]. Format option 2: [[bin1_min, bin1_max],[bin2_min, bin2_max],etc.]
+    agebinsc : array of colors that correspond to age bins
+    criteria : (optional) similiarty metric used in the MDS calculation. Options: 'Dmax' (default), 'Vmax', 'R2-PDP', 'R2-KDE'
+    bw : (optional) KDE bandwidth. Options are 'optimizedFixed', 'optimizedVariable', or a number (bandwidth in Myr)
+    color : (optional) if set to equal a column name in Samples, will color by this category
+    main_byid_df : (optional) required if color <> 'Default'. Set equal to main_byid_df.
+    colors : (optional) set to a list of colors of samples or sample groups
+
+    Returns
+    -------
+    fig : a figure with a MDS plot
+    stress : the scikit-learn stress value for the selected MDS solution
+
+    Notes
+    -----
+    This function is retained for backwards compatibility but is deprecated.
+    New code should use MDS_class.
+    """
+    from scipy import stats
+    from sklearn import manifold
+    import math
+    import warnings
+
+    warnings.warn(
+        'MDS() is deprecated and will be removed in a future major release; use MDS_class instead.',
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
+    matrix = np.empty(shape=(len(ages),len(ages)))
+
+    figMDS, ax = plt.subplots(1, figsize=(float(plotWidth), float(plotHeight)))
+
+    # Calculate the distribution matrix
+    if criteria == 'Dmax' or criteria == 'Vmax':
+        dist = CDFcalcAges(ages)[1]
+    if criteria == 'R2-PDP':
+        dist = PDPcalcAges(ages=ages, errors=errors, x1=0, x2=4500, xdif=1, cumulative=False)[1]
+    if criteria == 'R2-KDE':
+        dist = KDEcalcAges(ages=ages, x1=0, x2=4500, xdif=1, bw=bw, bw_x=bw_x, cumulative=False)[1]
+    for i in range(len(ages)):
+        for j in range(len(ages)):
+            if criteria == 'Dmax':
+                matrix[i,j] = stats.ks_2samp(ages[i],ages[j])[0]
+            if criteria == 'Vmax':
+                matrix[i,j] = calcVmax(dist[i], dist[j])
+            if criteria == 'R2-PDP' or criteria == 'R2-KDE':
+                matrix[i,j] = calcComplR2(dist[i], dist[j])
+
+    # scikit-learn 1.8 renamed the boolean ``metric`` argument to
+    # ``metric_mds`` and repurposed ``metric`` for the input distance metric.
+    if 'metric_mds' in inspect.signature(manifold.MDS).parameters:
+        metric_kwargs = {'metric_mds': True, 'metric': 'precomputed', 'init': 'random'}
+        nonmetric_kwargs = {'metric_mds': False, 'metric': 'precomputed', 'init': 'random'}
+    else:
+        metric_kwargs = {'metric': True, 'dissimilarity': 'precomputed'}
+        nonmetric_kwargs = {'metric': False, 'dissimilarity': 'precomputed'}
+
+    mds = manifold.MDS(
+        random_state=1,
+        n_init=1,
+        normalized_stress='auto',
+        **metric_kwargs,
+    )
+    pos = mds.fit_transform(matrix)
+    posStress = mds.stress_
+    nmds = manifold.MDS(
+        random_state=1,
+        n_init=1,
+        normalized_stress='auto',
+        **nonmetric_kwargs,
+    )
+    npos = nmds.fit_transform(matrix, init=pos)
+    nposStress = nmds.stress_
+    if metric:
+        m = pos
+        stress = posStress
+    else:
+        m = npos
+        stress = nposStress
+
+    # For coloring by category
+    if color != 'Default':
+        values = list(set(main_byid_df[color]))
+        dicts = {}
+        c = 0
+        for value in values:
+            dicts[value] = colorMe(c, colors)
+            c += 1
+
+    for i in range(len(npos)):
+        if plotPie:
+            if len(np.shape(agebins)) == 1:
+                hist = np.histogram(ages[i],agebins)[0]
+                histP = np.cumsum([0]+list(hist/np.sum(hist)))
+                for j in range(len(hist)): # One loop for each bin
+                    x = [0] + np.cos(np.linspace(2*math.pi*histP[j], 2*math.pi*histP[j+1], 100)).tolist()
+                    y = [0] + np.sin(np.linspace(2*math.pi*histP[j], 2*math.pi*histP[j+1], 100)).tolist()
+                    ax.fill(np.array(x)*pieSize+m[i][0],np.array(y)*pieSize+m[i][1],facecolor=agebinsc[j])
+            if len(np.shape(agebins)) == 2:
+                hist = [0]
+                for j in range(len(agebins)):
+                    hist.append(np.histogram(ages[i],agebins[j])[0][0])
+                histP = np.cumsum(list(hist/np.sum(hist)))
+                for j in range(len(hist)-1): # One loop for each bin
+                        x = [0] + np.cos(np.linspace(2*math.pi*histP[j], 2*math.pi*histP[j+1], 100)).tolist()
+                        y = [0] + np.sin(np.linspace(2*math.pi*histP[j], 2*math.pi*histP[j+1], 100)).tolist()
+                        ax.fill(np.array(x)*pieSize+m[i][0],np.array(y)*pieSize+m[i][1],facecolor=agebinsc[j])
+
+            if plotLabels:
+                ax.text(m[i][0]+pieSize/1.5,m[i][1]+pieSize/1.5,labels[i])
+            ax.set_aspect('equal')
+        else:
+            if color == 'Default':
+                ax.plot(m[i][0],m[i][1],'o',label=sampleList[i],color=colorMe(i, colors))
+                if plotLabels:
+                    ax.text(m[i][0]+0.01,m[i][1]+0.01,labels[i])
+            else:
+                ax.plot(m[i][0],m[i][1],'o',label=sampleList[i],color=dicts[main_byid_df.loc[sampleList[i],color]])
+                if plotLabels:
+                    ax.text(m[i][0]+0.01,m[i][1]+0.01,labels[i])
+
+    return figMDS, stress
+
 def plotDoubleDating(main_byid_df, sampleList, x1, x2, y1, y2, plotKDE, colorKDE, colorKDEbyAge, plotPDP, colorPDP, colorPDPbyAge, plotHist, b, bw, xdif, width, height, savePlot, agebins, agebinsc, coolingAge='ZHe_Age', coolingAgeErr='ZHe_Age_err', colors='Default'):
     """
     Creates a figure where detrital cooling ages are plotted against detrital crystallization ages.

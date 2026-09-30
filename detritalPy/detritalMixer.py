@@ -109,9 +109,10 @@ def resample_and_perturb_datesErrors(dates, errors, n=None, random_state=None):
     '''
     
     rng = _coerce_rng(random_state)
-    dates_perturbed = perturb_by_normal_distribution(dates, errors, random_state=rng)
+    dates_rs, errors_rs = resample_datesErrors(dates, errors, n=n, random_state=rng)
+    dates_rs = perturb_by_normal_distribution(dates_rs, errors_rs, random_state=rng)
 
-    return resample_datesErrors(dates_perturbed, errors, n=n, random_state=rng)
+    return dates_rs, errors_rs
 
 def perturb_by_normal_distribution(means, std_dev, random_state=None):
     '''

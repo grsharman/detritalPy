@@ -5,3 +5,8 @@ dist
 **_test.ipynb
 **-checkpoint.ipynb
 detritalpy/_version.py
+.DS_Store
+/detritalPy/.ipynb_checkpoints
+/detritalPy/Output
+/detritalPy/Output
+detritalPy/~$dPy-nmf_results.xlsx
