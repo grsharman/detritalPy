@@ -2146,8 +2146,6 @@ def MDAtoCSV(sampleList, ages, errors, numGrains, labels, fileName, sortBy, barW
 class MDS_class:
     """
     This is a class that computes multidimensional scaling (MDS) for distributive data (e.g., detrital zircon U-Pb age distributions)
-    Note: Initialization of non-metric MDS with metric MDS positions is no longer supported as of v1.4.6 due to changes in the
-    behavior of sklearn.manifold.MDS.
 
     Required Parameters
     ----------
@@ -2164,7 +2162,8 @@ class MDS_class:
     metric : set to False for non-metric MDS or set to True for metric MDS (default is False). Non-metric MDS is recommended (Vermeesch, 2013)
     criteria : similiarty metric used in the MDS calculation. Options: 'Vmax', 'Dmax', 'R2-PDP', 'R2-KDE', 'W2' (default is 'Vmax')
     bw : KDE bandwidth. Options are 'optimizedFixed', 'optimizedVariable', or a number (bandwidth in Myr) (default is 'optimizedFixed')
-    n_init : the number of initializations used in the MDS calculation. The final answer will be the initialation that results in the lowest stress value (default = 1000)
+    init : initialization method for non-metric MDS. Options are 'random' or 'metric'. If 'metric', the best metric MDS embedding is used to initialize a single non-metric MDS fit. Ignored when metric=True (default = 'random')
+    n_init : the number of starting configurations. For metric MDS and metric-initialized non-metric MDS, this is the number of metric MDS starts. For randomly initialized non-metric MDS, this is the number of non-metric MDS starts (default = 100)
     max_iter : the maximum number of iterations the MDS algorthm will run for a given initialization (default = 1000)
     x1 : lower limit (Ma) of age distribution to conduct MDS analysis on (default = 0)
     x2 : upper limit (Ma) of age distribution to conduct MDS analysis on (default = 4500)
@@ -2178,7 +2177,7 @@ class MDS_class:
     See Vermeesch (2013): Chemical Geology (https://doi.org/10.1016/j.chemgeo.2013.01.010) and the documentation of sklearn.manifold.MDS for more information on multidimensional scaling
 
     """
-    def __init__(self, ages, errors, labels, sampleList, metric=False, criteria='Vmax', bw='optimizedFixed', n_init=100, max_iter=1000, x1=0, x2=4500, xdif=1, min_dim=1, max_dim=3, dim=2, bw_x=None, normalized_stress='auto'):
+    def __init__(self, ages, errors, labels, sampleList, metric=False, criteria='Vmax', bw='optimizedFixed', n_init=100, max_iter=1000, x1=0, x2=4500, xdif=1, min_dim=1, max_dim=3, dim=2, bw_x=None, normalized_stress='auto', init='random'):
         # Import required modules
         from scipy import stats
         from sklearn import manifold
@@ -2191,9 +2190,15 @@ class MDS_class:
         self.metric = metric
         self.criteria = criteria
         self.bw = bw
+        self.init = init
         self.n_init = n_init
         self.max_iter = max_iter
         self.normalized_stress = normalized_stress
+
+        if self.init not in ['random', 'metric']:
+            raise ValueError("init must be 'random' or 'metric'")
+        if isinstance(self.n_init, (bool, np.bool_)) or not isinstance(self.n_init, (int, np.integer)) or self.n_init < 1:
+            raise ValueError('n_init must be a positive integer')
 
         # Generate sample labels for plotting
         if type(self.sampleList[0])==tuple:
@@ -2263,15 +2268,15 @@ class MDS_class:
         # while using the new API when it is available. Explicitly retain the
         # historical random initialization so results do not change when the
         # scikit-learn default changes in 1.10.
-        if 'metric_mds' in inspect.signature(manifold.MDS).parameters:
-            mds_api_kwargs = {
-                'metric_mds': self.metric,
-                'metric': 'precomputed',
-                'init': 'random'
-            }
-        else:
-            mds_api_kwargs = {
-                'metric': self.metric,
+        def mds_api_kwargs(is_metric):
+            if 'metric_mds' in inspect.signature(manifold.MDS).parameters:
+                return {
+                    'metric_mds': is_metric,
+                    'metric': 'precomputed',
+                    'init': 'random'
+                }
+            return {
+                'metric': is_metric,
                 'dissimilarity': 'precomputed'
             }
 
@@ -2282,22 +2287,44 @@ class MDS_class:
                 self.mds = manifold.MDS(
                     n_components = n_components,
                     random_state=i+1,
-                    n_init=self.n_init if isinstance(self.n_init, int) else 100,
+                    n_init=self.n_init,
                     max_iter= self.max_iter,
                     normalized_stress=normalized_stress,
-                    **mds_api_kwargs
+                    **mds_api_kwargs(True)
                 )
                 self.pos = self.mds.fit_transform(self.matrix)
                 stress = self.mds.stress_
                 m = self.pos
-            else: # Non-metric MDS (metric MDS not used as initial configuration)
+            elif self.init == 'metric': # Non-metric MDS initialized with metric MDS positions
+                self.mds = manifold.MDS(
+                    n_components = n_components,
+                    random_state=i+1,
+                    n_init=self.n_init,
+                    max_iter=self.max_iter,
+                    normalized_stress=normalized_stress,
+                    **mds_api_kwargs(True)
+                )
+                self.pos = self.mds.fit_transform(self.matrix)
+
                 self.nmds = manifold.MDS(
                     n_components = n_components,
                     random_state=i+1,
-                    n_init = self.n_init if isinstance(self.n_init, int) else 100,
+                    n_init=1,
+                    max_iter=self.max_iter,
+                    normalized_stress=normalized_stress,
+                    **mds_api_kwargs(False)
+                )
+                self.npos = self.nmds.fit_transform(self.matrix, init=self.pos)
+                stress = self.nmds.stress_
+                m = self.npos
+            else: # Non-metric MDS with random initial configurations
+                self.nmds = manifold.MDS(
+                    n_components = n_components,
+                    random_state=i+1,
+                    n_init=self.n_init,
                     max_iter= self.max_iter,
                     normalized_stress=normalized_stress,
-                    **mds_api_kwargs)
+                    **mds_api_kwargs(False))
                 self.npos = self.nmds.fit_transform(self.matrix)
                 stress = self.nmds.stress_
                 m = self.npos
@@ -2639,118 +2666,6 @@ class MDS_class:
         if stressType == 'sklearn' or stressType == 'Stress-1':
             print('Final stress: ',self.stressArray[self.dim-self.min_dim])
     
-def MDS(ages, errors, labels, sampleList, metric=False, plotWidth='10', plotHeight='8', plotPie=False, pieSize=0.05, agebins=None, agebinsc=None, criteria='Dmax', bw='optimizedFixed', bw_x=None, color='Default', main_byid_df=None, plotLabels=True, colors='Default'):
-    """
-    Create a multi-dimensional scaling (MDS) plot for individual samples or groups of samples.
-
-    Parameters
-    ----------
-    ages : array of ages for each sample or sample group. Output from sampleToData()
-    labels : array of labels for each sample or sample group. Output from sampleToData()
-    sampleList : array of sample IDs.
-        Must be in form for individual samples: ['Sample1', 'Sample2', . . . , etc.].
-        Must be in the form for groups of samples: [(['Sample1','Sample2', . . . , etc.], 'Group 1 name'),
-                                                    (['Sample1','Sample2', . . . , etc.], 'Group 2 name')]
-    metric : set to False for non-metric MDS
-    plotWidth : specify the width of the plot
-    plotHeight : specify the height of the plot
-    plotPie : set to True to plot data points as pies
-    pieSize : specify the size of pie plots
-    agebins : array of bin edges in Myr. Format option 1: [age1, age2, age3, etc.]. Format option 2: [[bin1_min, bin1_max],[bin2_min, bin2_max],etc.]
-    agebinsc : array of colors that correspond to age bins
-    criteria : (optional) similiarty metric used in the MDS calculation. Options: 'Dmax' (default), 'Vmax', 'R2-PDP', 'R2-KDE'
-    bw : (optional) KDE bandwidth. Options are 'optimizedFixed', 'optimizedVariable', or a number (bandwidth in Myr)
-    color : (optional) if set to equal a column name in Samples, will color by this category
-    main_byid_df : (optional) required if color <> 'Default'. Set equal to main_byid_df.
-    colors : (optional) set to a list of colors of samples or sample groups
-
-    Returns
-    -------
-    fig : a figure with a MDS plot
-    
-    Notes
-    -----
-    The MDS() function has been deprecated. We recommend using functions within the MDS_class().
-    """     
-    from scipy import stats
-    from sklearn import manifold
-    import math
-
-    matrix = np.empty(shape=(len(ages),len(ages)))
-
-    figMDS, ax = plt.subplots(1, figsize=(plotWidth,plotHeight))
-
-    # Calculate the distribution matrix
-    if criteria == 'Dmax' or criteria == 'Vmax':
-        dist = CDFcalcAges(ages)[1]
-    if criteria == 'R2-PDP':
-        dist = PDPcalcAges(ages=ages, errors=errors, x1=0, x2=4500, xdif=1, cumulative=False)[1]
-    if criteria == 'R2-KDE':
-        dist = KDEcalcAges(ages=ages, x1=0, x2=4500, xdif=1, bw=bw, bw_x=bw_x, cumulative=False)[1]
-    for i in range(len(ages)):
-        for j in range(len(ages)):
-            if criteria == 'Dmax':
-                matrix[i,j] = stats.ks_2samp(ages[i],ages[j])[0]
-            if criteria == 'Vmax':
-                matrix[i,j] = calcVmax(dist[i], dist[j])
-            if criteria == 'R2-PDP' or criteria == 'R2-KDE':
-                matrix[i,j] = calcComplR2(dist[i], dist[j])     
-    mds = manifold.MDS(random_state=1, dissimilarity='precomputed', n_init=1, normalized_stress='auto')
-    pos = mds.fit(matrix).embedding_
-    posStress = mds.fit(matrix).stress_     
-    nmds = manifold.MDS(metric=False, random_state=1, dissimilarity='precomputed', n_init=1, normalized_stress='auto')
-    npos = nmds.fit_transform(matrix, init=pos)
-    nposStress = mds.fit(matrix).stress_ 
-    if metric:
-        m = pos
-        stress = posStress
-    else:
-        m = npos
-        stress = nposStress
-
-    # For coloring by category
-    if color != 'Default':
-        values = list(set(main_byid_df[color]))
-        dicts = {}
-        c = 0
-        for value in values:
-            dicts[value] = colorMe(c, colors)
-            c += 1
-
-    for i in range(len(npos)):
-        if plotPie:
-            if len(np.shape(agebins)) == 1:
-                hist = np.histogram(ages[i],agebins)[0]
-                histP = np.cumsum([0]+list(hist/np.sum(hist)))
-                for j in range(len(hist)): # One loop for each bin
-                    x = [0] + np.cos(np.linspace(2*math.pi*histP[j], 2*math.pi*histP[j+1], 100)).tolist()
-                    y = [0] + np.sin(np.linspace(2*math.pi*histP[j], 2*math.pi*histP[j+1], 100)).tolist()
-                    ax.fill(np.array(x)*pieSize+m[i][0],np.array(y)*pieSize+m[i][1],facecolor=agebinsc[j])
-            if len(np.shape(agebins)) == 2:
-                hist = [0]
-                for j in range(len(agebins)):
-                    hist.append(np.histogram(ages[i],agebins[j])[0][0])
-                histP = np.cumsum(list(hist/np.sum(hist)))
-                for j in range(len(hist)-1): # One loop for each bin
-                        x = [0] + np.cos(np.linspace(2*math.pi*histP[j], 2*math.pi*histP[j+1], 100)).tolist()
-                        y = [0] + np.sin(np.linspace(2*math.pi*histP[j], 2*math.pi*histP[j+1], 100)).tolist()
-                        ax.fill(np.array(x)*pieSize+m[i][0],np.array(y)*pieSize+m[i][1],facecolor=agebinsc[j])
-
-            if plotLabels:
-                ax.text(m[i][0]+pieSize/1.5,m[i][1]+pieSize/1.5,labels[i])
-            ax.set_aspect('equal')
-        else:
-            if color == 'Default':
-                ax.plot(m[i][0],m[i][1],'o',label=sampleList[i],color=colorMe(i, colors))
-                if plotLabels:
-                    ax.text(m[i][0]+0.01,m[i][1]+0.01,labels[i])
-            else:
-                ax.plot(m[i][0],m[i][1],'o',label=sampleList[i],color=dicts[main_byid_df.loc[sampleList[i],color]])
-                if plotLabels:
-                    ax.text(m[i][0]+0.01,m[i][1]+0.01,labels[i])
-
-    return figMDS, stress
-
 def plotDoubleDating(main_byid_df, sampleList, x1, x2, y1, y2, plotKDE, colorKDE, colorKDEbyAge, plotPDP, colorPDP, colorPDPbyAge, plotHist, b, bw, xdif, width, height, savePlot, agebins, agebinsc, coolingAge='ZHe_Age', coolingAgeErr='ZHe_Age_err', colors='Default'):
     """
     Creates a figure where detrital cooling ages are plotted against detrital crystallization ages.
