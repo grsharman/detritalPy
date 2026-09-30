@@ -2528,7 +2528,7 @@ class MDS_class:
             figShepard.savefig('Output/'+fileName)
 
     def MDSplot(self, figsize=(6,6), savePlot=True, fileName='MDSplot.pdf', plotPie=False, pieSize=0.05, agebins=None, agebinsc=None, pieType='Age', 
-        pieCategories=None, df=None, axes=None, colorBy='Default', plotLabels=True, equalAspect=True, stressType='sklearn', colors='Default'):
+        pieCategories=None, df=None, axes=None, colorBy='Default', plotLabels=True, equalAspect=False, stressType='sklearn', colors='Default'):
         """
         Plot the results of the MDS analysis
 

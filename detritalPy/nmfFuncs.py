@@ -15,7 +15,7 @@ import xlsxwriter
 # Functions for nmf 
 ###############################################################
 
-def nmf(ages, errors=None, dist_type='KDE', bw=20, bw_x=None, x1=0, x2=4500, nEMs=10, max_iter=10000, tol=1e-8, verbose=True):
+def nmf(ages, errors=None, dist_type='KDE', bw=20, bw_x=None, x1=0, x2=4500, nEMs=10, max_iter=10000, tol=1e-8, verbose=True, normalization='corrected', random_state=None):
 	"""
 	Code for conducting non-negative matrix factorization (NMF) using the scikit-learn library.
 
@@ -38,11 +38,20 @@ def nmf(ages, errors=None, dist_type='KDE', bw=20, bw_x=None, x1=0, x2=4500, nEM
 	nEMs : int, default: 10
 		number of end-members to model
 	max_iter : int, default: 10000
-		maximum number of iterations before the NMF algorithm times out. See sklearn.decomposition.NMF for more information.
+		maximum number of iterations for the NMF algorithm. See sklearn.decomposition.NMF for more information.
 	tol : float, default: 1e-8
 		tolerance for the stopping condition of the NMF algorithm. See sklearn.decomposition.NMF for more information.
 	verbose : bool, default: True
 		Set to True to print a readout of progress
+	normalization : {'corrected','legacy'}, default: 'corrected'
+		Method used to normalize the NMF factors. 'corrected' transfers each
+		end-member's scale from H to W before converting W to proportions, so
+		the normalized factors preserve the fitted reconstruction. 'legacy'
+		independently normalizes W and H to reproduce the previous behavior.
+	random_state : int or None, default: None
+		Random seed passed to scikit-learn's NMF initialization. Set to an
+		integer to make repeated runs reproducible, or use None to preserve
+		the previous non-seeded behavior.
 
 	Returns
 	-------
@@ -102,7 +111,7 @@ def nmf(ages, errors=None, dist_type='KDE', bw=20, bw_x=None, x1=0, x2=4500, nEM
 			print('------------------------')
 			print('Starting end-member', i+1)
 		start_i = time.time()
-		model = NMF(n_components=i+1, solver='cd', max_iter=100000, init='nndsvda', tol=1e-12)#, init='random')#, random_state=0) # Note: can adjust max_iter and tol search parameters
+		model = NMF(n_components=i+1, solver='cd', max_iter=max_iter, init='nndsvda', tol=tol, random_state=random_state)
 		W.append(model.fit_transform(X))
 		H.append(model.components_)
 		modelRecstErr.append(model.reconstruction_err_)
@@ -112,21 +121,12 @@ def nmf(ages, errors=None, dist_type='KDE', bw=20, bw_x=None, x1=0, x2=4500, nEM
 	if verbose:
 		print('Finished NMF....')
 
-	# Normalize W and H so that they sums to one
-	Wnorm = []
-	for i in range(len(W)):
-		WnormTemp = np.copy(W[i])
-		for j in range(len(W[i])):
-			WnormTemp[j] = W[i][j]/sum(W[i][j])
-		Wnorm.append(WnormTemp)
-
-	Hnorm = H.copy()
-	for i in range(len(H)): # One loop for each end-member scenario
-		for j in range(len(H[i])): # One loop for each end-member
-			Hnorm[i][j] = H[i][j]/np.sum(H[i][j]) # Normalize so area under curve = 1
+	# Normalize W and H so that their rows sum to one. The corrected mode
+	# preserves the fitted reconstruction after resolving NMF's scale ambiguity.
+	Wnorm, Hnorm = normalize_nmf_factors(W, H, normalization=normalization)
 
 	if verbose:
-		print('Finished normalization....')
+		print('Finished normalization ('+normalization+')....')
 
 	# Preallocate arrays to store comparisons in
 	r2 = np.zeros(shape=(len(X),len(X)))
@@ -160,6 +160,61 @@ def nmf(ages, errors=None, dist_type='KDE', bw=20, bw_x=None, x1=0, x2=4500, nEM
 		print('Input sample Vmax mean and range: ',round(in_Vmax_avg, 3),',', round(in_Vmax_range,3))
 
 	return xAge, X, Xmodeled, W, Wnorm, Hnorm, modelRecstErr, nint, in_r2_avg, in_r2_range, in_Vmax_avg, in_Vmax_range, out_r2, out_Vmax
+
+def normalize_nmf_factors(W, H, normalization='corrected'):
+	"""
+	Normalize NMF factors into sample proportions and end-member distributions.
+
+	Parameters
+	----------
+	W : list of arrays
+		Raw sample coefficients for each end-member scenario.
+	H : list of arrays
+		Raw end-member distributions for each end-member scenario.
+	normalization : {'corrected','legacy'}, default: 'corrected'
+		'corrected' preserves the row-normalized fitted reconstruction by
+		transferring each end-member's total mass from H into W. 'legacy'
+		independently normalizes W and H, reproducing the previous behavior.
+
+	Returns
+	-------
+	Wnorm : list of arrays
+		Sample coefficients normalized to sum to one per sample.
+	Hnorm : list of arrays
+		End-member distributions normalized to sum to one per end member.
+	"""
+	if normalization not in ['corrected', 'legacy']:
+		raise ValueError("normalization must be either 'corrected' or 'legacy'")
+
+	if len(W) != len(H):
+		raise ValueError('W and H must contain the same number of scenarios')
+
+	Wnorm = []
+	Hnorm = []
+
+	for W_i, H_i in zip(W, H):
+		W_i = np.asarray(W_i)
+		H_i = np.asarray(H_i)
+
+		component_mass = np.sum(H_i, axis=1)
+		if np.any(component_mass <= 0):
+			raise ValueError('NMF produced an end member with zero total mass')
+
+		Hnorm_i = H_i / component_mass[:, np.newaxis]
+
+		if normalization == 'corrected':
+			Wscaled_i = W_i * component_mass[np.newaxis, :]
+		else:
+			Wscaled_i = W_i.copy()
+
+		sample_mass = np.sum(Wscaled_i, axis=1, keepdims=True)
+		if np.any(sample_mass <= 0):
+			raise ValueError('NMF produced a sample with zero total weight')
+
+		Wnorm.append(Wscaled_i / sample_mass)
+		Hnorm.append(Hnorm_i)
+
+	return Wnorm, Hnorm
 
 def compute_child_fit(H, X, W):
 	"""
@@ -220,7 +275,8 @@ def compute_child_fit(H, X, W):
 def nmf_to_excel(labels, numGrains, xAge, X, Wnorm, 
 	H, modelRecstErr, nEMs, EMs_min, EMs_max, max_iter, nint, tol,
 	in_r2_avg, in_r2_range, in_Vmax_avg, in_Vmax_range, out_r2, out_Vmax,
-	dist_type, bw, bw_x=None, file_name='dPy-nmf_results.xlsx', version=None, verbose=True):
+	dist_type, bw, bw_x=None, file_name='dPy-nmf_results.xlsx', version=None, verbose=True,
+	normalization='corrected', random_state=None):
 	"""
 	Code for outputing NMF results to an Excel file
 
@@ -277,6 +333,10 @@ def nmf_to_excel(labels, numGrains, xAge, X, Wnorm,
     	version of detritalPy used in modeling. set to detritalpy.__version__
 	verbose : bool, default: True
 		set to True to print when export is completed
+	normalization : {'corrected','legacy'}, default: 'corrected'
+		normalization method used by nmf()
+	random_state : int or None, default: None
+		random seed used by nmf()
 
 	Returns
 	-------
@@ -311,6 +371,8 @@ def nmf_to_excel(labels, numGrains, xAge, X, Wnorm,
 	worksheet.write(17, 0, 'Selected number of end-members: '+str(EMs_max))
 	worksheet.write(18, 0, 'Maximum number of iterations: '+str(max_iter))
 	worksheet.write(19, 0, 'Tolerance: '+str(tol))
+	worksheet.write(20, 0, 'Normalization method: '+str(normalization))
+	worksheet.write(21, 0, 'Random state: '+str(random_state))
 
 	worksheet = workbook.add_worksheet('Model_fit')
 	worksheet.write(0, 0, 'Number of end-members')

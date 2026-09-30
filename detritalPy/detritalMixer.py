@@ -20,7 +20,17 @@ AVAILABLE_METRICS = ['dmax','vmax','similarity-pdp','likeness-pdp','r2-pdp', 'si
 ## Helper functions
 ########################################################################################################################
 
-def resample_datesErrors(dates, errors, n = None):
+def _coerce_rng(random_state=None):
+    """Return a NumPy random-number generator from a seed or generator."""
+    if random_state is None:
+        # Preserve historical behavior, including support for np.random.seed().
+        return np.random
+    if isinstance(random_state, (np.random.Generator, np.random.RandomState)):
+        return random_state
+    return np.random.default_rng(random_state)
+
+
+def resample_datesErrors(dates, errors, n=None, random_state=None):
     '''
     This function resamples (with replacement) the dates and corresponding
     errors in the provided arrays. 
@@ -34,6 +44,8 @@ def resample_datesErrors(dates, errors, n = None):
     n : int, optional
         The number of items to draw in the resampling, by default will
         use the total number of dates available. The default is None.
+    random_state : int, numpy.random.Generator, numpy.random.RandomState, optional
+        Seed or random-number generator used for resampling. The default is None.
 
 
     Returns
@@ -51,15 +63,20 @@ def resample_datesErrors(dates, errors, n = None):
     if n is None:
       n = len(dates)
     
-    #Get a random index of which entries to resample
-    randIdx = np.random.randint(0,len(dates)-1,size = n)
+    # Get random indices of entries to resample. The upper bound is exclusive,
+    # so use len(dates) to ensure that the final observation can be selected.
+    rng = _coerce_rng(random_state)
+    if isinstance(rng, np.random.Generator):
+        randIdx = rng.integers(0, len(dates), size=n)
+    else:
+        randIdx = rng.randint(0, len(dates), size=n)
     
     #resample the data
     dates_rs,errors_rs = dates[randIdx],errors[randIdx]
     
     return dates_rs,errors_rs
 
-def resample_and_perturb_datesErrors(dates, errors, n=None):
+def resample_and_perturb_datesErrors(dates, errors, n=None, random_state=None):
     '''
     This function resamples (with replacement) the dates and corresponding
     errors in the provided arrays. In addition, it adds variability by perturbing
@@ -77,6 +94,8 @@ def resample_and_perturb_datesErrors(dates, errors, n=None):
     n : int, optional
         the number of items to draw in the resampling, by default will
     use the total number of dates available. The default is None.
+    random_state : int, numpy.random.Generator, numpy.random.RandomState, optional
+        Seed or random-number generator used for perturbation and resampling. The default is None.
 
     Returns
     -------
@@ -89,11 +108,12 @@ def resample_and_perturb_datesErrors(dates, errors, n=None):
 
     '''
     
-    dates_perturbed = perturb_by_normal_distribution(dates, errors)
-    
-    return resample_datesErrors(dates_perturbed,errors,n=n)
+    rng = _coerce_rng(random_state)
+    dates_perturbed = perturb_by_normal_distribution(dates, errors, random_state=rng)
 
-def perturb_by_normal_distribution(means,std_dev):
+    return resample_datesErrors(dates_perturbed, errors, n=n, random_state=rng)
+
+def perturb_by_normal_distribution(means, std_dev, random_state=None):
     '''
     This function perturbs a series of mean values by a random amount drawn
     from a normal distribution with the specified standard deviations
@@ -104,6 +124,8 @@ def perturb_by_normal_distribution(means,std_dev):
         Array of mean values .
     std_dev : np.ndarray
         standard deviations associated with each mean.
+    random_state : int, numpy.random.Generator, numpy.random.RandomState, optional
+        Seed or random-number generator used for perturbation. The default is None.
 
     Returns
     -------
@@ -113,7 +135,8 @@ def perturb_by_normal_distribution(means,std_dev):
 
     '''
     
-    means_pert = means + std_dev*np.random.standard_normal(len(means))
+    rng = _coerce_rng(random_state)
+    means_pert = means + std_dev*rng.standard_normal(len(means))
     
     return means_pert
 
@@ -313,11 +336,11 @@ def permutation_test(sampleA,sampleB,comparison_function,n_perms = 10000,
     if ageGoodFitsSmallValues:
         #If good fits have small values, we are interested in how often random
         #shuffles are larger than the original function (e.g., a worse fit)
-        p_perm = np.float(np.sum(perm_fun_vals > orig_fun_val)/n_perms)
+        p_perm = float(np.sum(perm_fun_vals > orig_fun_val)/n_perms)
     else:
         #If good fits have large values, we are interested in how often random
         #shuffles are smaller than the original function (e.g., a worse fit)
-        p_perm = np.float(np.sum(perm_fun_vals < orig_fun_val)/n_perms)
+        p_perm = float(np.sum(perm_fun_vals < orig_fun_val)/n_perms)
         
     return p_perm, orig_fun_val, perm_fun_vals
 
@@ -326,7 +349,8 @@ def bootstrapped_self_comparisons_many_samples(main_byid_df,sampleList,
                                                objective_metric='dmax',
                                                sigma='1sigma',
                                                x1=0, x2=4500,xdif=1,
-                                               bw=2, bw_x=None, nBootstrapIterations=1000):
+                                               bw=2, bw_x=None, nBootstrapIterations=1000,
+                                               random_state=None):
     """
 
     This function calls bootstrapped_self_comparison on many individual samples, listed in sampleList,
@@ -352,6 +376,9 @@ def bootstrapped_self_comparisons_many_samples(main_byid_df,sampleList,
         objective_metric : String, optional
             The objective comparison function used to assess similarity between datasets. The default is 'dmax'. For a 
             full list of values call print(dMix.AVAILABLE_METRICS)
+        sigma : string, optional
+            Specifies whether the input uncertainties are reported at the '1sigma' or '2sigma' level.
+            Input uncertainties are converted to 1-sigma values before use. The default is '1sigma'.
         nBootstrapIterations : int, optional
             The number of bootstrapping iterations performed. The default is 1000, for which the original sample will be compared
             to 1000 resampled versions of itself.
@@ -365,6 +392,8 @@ def bootstrapped_self_comparisons_many_samples(main_byid_df,sampleList,
             The bandwidth for kernels used in KDEs. The default is 2.
         bw_x : None or list, optional
             Set to None if not using a split KDE bw. Otherwise, set x-axis locations for bw split (in Ma) in a list, (e.g., bw_x=[300])
+        random_state : int, numpy.random.Generator, numpy.random.RandomState, optional
+            Seed or random-number generator used for bootstrapping. The default is None.
 
     Returns:
         selfCompMetrics_bs_set : list
@@ -376,8 +405,11 @@ def bootstrapped_self_comparisons_many_samples(main_byid_df,sampleList,
     """
     
     
+    rng = _coerce_rng(random_state)
+
     ages,errors, nGrains, labels = dFunc.sampleToData(sampleList,
-                                                     main_byid_df)
+                                                     main_byid_df,
+                                                     sigma=sigma)
     
     selfCompMetrics_bs_set, childDists_bs_set = [],[]
     
@@ -385,7 +417,8 @@ def bootstrapped_self_comparisons_many_samples(main_byid_df,sampleList,
         res_i = bootstrapped_self_comparison(ages[i],errors[i],
                                              doPerturbResampledAges,
                                              objective_metric,
-                                             x1,x2,xdif,bw,bw_x,nBootstrapIterations)
+                                             x1,x2,xdif,bw,bw_x,nBootstrapIterations,
+                                             random_state=rng)
         
         selfCompMetrics_bs_set.append(res_i[0])
         childDists_bs_set.append(res_i[1])
@@ -394,7 +427,8 @@ def bootstrapped_self_comparisons_many_samples(main_byid_df,sampleList,
 
 def bootstrapped_self_comparison(ages,errors,doPerturbResampledAges = True,
                                  objective_metric = 'dmax',x1=0, x2=4500,
-                                 xdif = 1,bw = 2, bw_x = None, nBootstrapIterations = 1000):
+                                 xdif = 1,bw = 2, bw_x = None, nBootstrapIterations = 1000,
+                                 random_state=None):
     '''
     A function to assess the variability in an objective function that might result from random sampling.
 
@@ -429,6 +463,8 @@ def bootstrapped_self_comparison(ages,errors,doPerturbResampledAges = True,
         The bandwidth for kernels used in KDEs. The default is 2.
     bw_x : None or list, optional
         Set to None if not using a split KDE bw. Otherwise, set x-axis locations for bw split (in Ma) in a list, (e.g., bw_x=[300])
+    random_state : int, numpy.random.Generator, numpy.random.RandomState, optional
+        Seed or random-number generator used for bootstrapping. The default is None.
 
     Returns
     -------
@@ -440,7 +476,9 @@ def bootstrapped_self_comparison(ages,errors,doPerturbResampledAges = True,
         the distributions, contains each randomly resampled distribution.
     '''
 
-    #For the supplied distribution comparison function identified, 
+    rng = _coerce_rng(random_state)
+
+    #For the supplied distribution comparison function identified,
     #get the functions needed to evaluate that metric
     dist_function,comp_function, areGoodFitsSmall = lookup_functions_for_metric(objective_metric,
                                                               x1,x2,xdif,bw,bw_x)
@@ -469,7 +507,8 @@ def bootstrapped_self_comparison(ages,errors,doPerturbResampledAges = True,
     
         #Resample with replacement the child
         child_ages_rs,child_errors_rs = resampling_function(ages,
-                                                            errors)
+                                                            errors,
+                                                            random_state=rng)
         
         #Calculate the distribution for this data
         child_dist_rs = dist_function([child_ages_rs],
@@ -731,7 +770,8 @@ def bootstrap_find_best_mixtures(parentAges,parentErrors,
                                 nGrainsToResample = None,
                                 verbose = False,
                                 start = None,
-                                update_freq = None):
+                                update_freq = None,
+                                random_state = None):
     '''
     This function determines a series of bootstrapped estimates for the mixing
     coefficients that best describe how the supplied parentAges and Errors combine
@@ -776,6 +816,8 @@ def bootstrap_find_best_mixtures(parentAges,parentErrors,
         Input from the time.time() function (starting time of process). Default is None.
     update_freq : integer or None, optional
         Frequency of how often code progress is printed. Default is None.
+    random_state : int, numpy.random.Generator, numpy.random.RandomState, optional
+        Seed or random-number generator used for bootstrapping. The default is None.
 
     Returns
     -------
@@ -788,6 +830,8 @@ def bootstrap_find_best_mixtures(parentAges,parentErrors,
         np.ndarray of size nBootstrapIterations x len(distributions). Contains the best fitting mixed distribution for each
         bootstrap iteration.
     '''
+
+    rng = _coerce_rng(random_state)
 
     #Preallocate space for the outputs
     mixing_coeffs_bs = np.zeros((nBootstrapIterations,len(parentAges)))
@@ -816,14 +860,16 @@ def bootstrap_find_best_mixtures(parentAges,parentErrors,
         #For each parent's dates and errors
         for p,e in zip(parentAges,parentErrors):
             #Resample the values
-            p_rs,e_rs = resampling_function(p,e,nGrainsToResample)
+            p_rs,e_rs = resampling_function(p, e, nGrainsToResample,
+                                             random_state=rng)
             #Add these to the list
             parentAges_rs.append(p_rs)
             parentErrors_rs.append(e_rs)
           
         #Resample the child dates and errors
         childDates_rs, childErrors_rs = resampling_function(childAges,
-                                                            childErrors)
+                                                            childErrors,
+                                                            random_state=rng)
       
         #Find the best fitting values and store these
         res = find_best_fit_parent_mixture(parentAges_rs,parentErrors_rs,
@@ -952,7 +998,8 @@ def bootstrap_solve_mixture_models(parent_list,child_list,main_byid_df,
                                     x1=0, x2=4500,xdif = 1,bw = 2, bw_x=None,
                                     sampleLabel='Sample_ID',
                                     verbose=True,
-                                    update_freq = 10):
+                                    update_freq = 10,
+                                    random_state=None):
     '''
     Determine the best fitting mixing coefficients for a suite of child samples, given the parents supplied in parent_list. 
 
@@ -996,6 +1043,9 @@ def bootstrap_solve_mixture_models(parent_list,child_list,main_byid_df,
         Set to True to print out a readout of progress. Default = True.
     update_freq : integer, optional
         How frequent to update progress (only applies if verbose = True)
+    random_state : int, numpy.random.Generator, numpy.random.RandomState, optional
+        Seed or random-number generator used for bootstrapping. Passing the same
+        value reproduces the same resamples. The default is None.
 
     Returns
     -------
@@ -1009,7 +1059,9 @@ def bootstrap_solve_mixture_models(parent_list,child_list,main_byid_df,
         distribution for each bootstrap iteration.
     '''
 
-    #For the supplied distribution comparison function identified, 
+    rng = _coerce_rng(random_state)
+
+    #For the supplied distribution comparison function identified,
     #get the functions needed to evaluate that metric
     dist_function, comp_function, areGoodFitsSmallValues = lookup_functions_for_metric(objective_metric,
                                                                                       x1,x2,xdif,bw,bw_x)
@@ -1053,7 +1105,8 @@ def bootstrap_solve_mixture_models(parent_list,child_list,main_byid_df,
                                            nGrainsToResample,
                                            verbose=verbose,
                                            start=start,
-                                           update_freq = update_freq)
+                                           update_freq = update_freq,
+                                           random_state=rng)
     
         #Get all the bootstrapped values from the result
         mix_coeffs_all[i],obj_vals_all[i],Cmod_all[i] = res
@@ -1894,6 +1947,8 @@ def plot_child_bootstrappedmodel_distribution_comparison(main_byid_df,child_mode
                                                     fill_colors = child_colors,fill_alpha = fill_alpha,
                                                     confidence_interval = confidence_interval)
 
+    objective_metric_lower = objective_metric.lower()
+
     #Add the legends to the plots
     if len(child_list) == 1:
         axs.plot(dist_axis,distributions_children[0],'-',color = 'k',label = labels_c[0]) # color = child_colors[0]
@@ -1903,7 +1958,7 @@ def plot_child_bootstrappedmodel_distribution_comparison(main_byid_df,child_mode
         axs.set_xlim(xaxis_1, xaxis_2)
         #if i < (len(child_list)-1):
         #    axs.set_xlabel('')
-        if (objective_metric == 'dmax') or (objective_metric == 'vmax'): # CDFs are plotted for Dmax and Vmax, relative age distributions for the others
+        if objective_metric_lower in ('dmax', 'vmax'): # CDFs are plotted for Dmax and Vmax, relative age distributions for the others
             axs.set_ylim(0,1)
         else:
             axs.set_ylim(0,)
@@ -1915,7 +1970,7 @@ def plot_child_bootstrappedmodel_distribution_comparison(main_byid_df,child_mode
             axs[i].set_xlim(xaxis_1, xaxis_2)
             if i < (len(child_list)-1):
                 axs[i].set_xlabel('')
-        if (objective_metric == 'dmax') or (objective_metric == 'vmax'): # CDFs are plotted for Dmax and Vmax, relative age distributions for the others
+        if objective_metric_lower in ('dmax', 'vmax'): # CDFs are plotted for Dmax and Vmax, relative age distributions for the others
             axs[i].set_ylim(0,1)
         else:
             axs[i].set_ylim(0,)
@@ -2628,7 +2683,7 @@ def colorByAge(KDE, agebins, agebinsc, agebinsc_alpha, xdif, ax=None):
 
 def export_results(parent_list, child_list, main_byid_df, objective_metric, xdif, bw, mix_coeffs_bf, obj_func_val, file_name='dMix_results.xlsx',
     verbose=True, version=None, bootstrap=False, nBootstrapIterations=None, doPerturbResampledAges=None, nGrainsToResample=None, mix_coeffs_all=None,
-    obj_vals_all=None, obj_func_crit=None, worse_than_crit=None, selfCompMetrics_bs_set=None):
+    obj_vals_all=None, obj_func_crit=None, worse_than_crit=None, selfCompMetrics_bs_set=None, random_seed=None):
     """
     Export mixture modeling results as an Excel spreadsheet
 
@@ -2667,6 +2722,8 @@ def export_results(parent_list, child_list, main_byid_df, objective_metric, xdif
         Whether resampled ages were additionally randomized based on the assigned uncertainty. Default is None.
     nGrainsToResample : int, optional
         The number of grains to resample with each bootstrap iteration. The default is None.
+    random_seed : int or None, optional
+        Seed used to generate reproducible bootstrap results. The default is None.
     mix_coeffs_all : list, optional
         The suite of bootstrapped mixing coefficients for each children. The default is None.
     obj_vals_all : list of arrays, optional
@@ -2722,7 +2779,8 @@ def export_results(parent_list, child_list, main_byid_df, objective_metric, xdif
             worksheet.write(8, 0, 'Bootstrapped estimates are drawn by sampling the observed number of analyses (default)')
         else:
             worksheet.write(8, 0, 'Number of analyses drawn per bootstrapped estimate :'+str(nGrainsToResample))
-        c=4
+        worksheet.write(9, 0, 'Random seed: '+str(random_seed))
+        c=5
     else:
         c=0
     worksheet.write(6+c, 0, 'Plotting parameters:')
