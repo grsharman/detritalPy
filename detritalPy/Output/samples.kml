@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2">
+    <Document id="43">
+        <Style id="44">
+            <IconStyle id="45">
+                <colorMode>normal</colorMode>
+                <scale>1</scale>
+                <heading>0</heading>
+                <Icon id="46">
+                    <href>https://maps.google.com/mapfiles/kml/shapes/placemark_circle_highlight.png</href>
+                </Icon>
+            </IconStyle>
+        </Style>
+        <Placemark id="48">
+            <name>POR-1</name>
+            <description>Point of Rocks Ss</description>
+            <styleUrl>#44</styleUrl>
+            <Point id="47">
+                <coordinates>-120.01811666666667,35.727266666666665,0.0</coordinates>
+            </Point>
+        </Placemark>
+        <Placemark id="50">
+            <name>POR-2</name>
+            <description>Point of Rocks Ss</description>
+            <styleUrl>#44</styleUrl>
+            <Point id="49">
+                <coordinates>-119.84809,35.43772,0.0</coordinates>
+            </Point>
+        </Placemark>
+        <Placemark id="52">
+            <name>POR-3</name>
+            <description>Point of Rocks Ss</description>
+            <styleUrl>#44</styleUrl>
+            <Point id="51">
+                <coordinates>-119.779138888889,35.381750000000004,0.0</coordinates>
+            </Point>
+        </Placemark>
+        <Placemark id="54">
+            <name>BUT-5</name>
+            <description>Butano Ss</description>
+            <styleUrl>#44</styleUrl>
+            <Point id="53">
+                <coordinates>-122.2637,37.3785,0.0</coordinates>
+            </Point>
+        </Placemark>
+        <Placemark id="56">
+            <name>BUT-4</name>
+            <description>Butano Ss</description>
+            <styleUrl>#44</styleUrl>
+            <Point id="55">
+                <coordinates>-122.19638888888889,37.19888888888889,0.0</coordinates>
+            </Point>
+        </Placemark>
+        <Placemark id="58">
+            <name>BUT-3</name>
+            <description>Butano Ss</description>
+            <styleUrl>#44</styleUrl>
+            <Point id="57">
+                <coordinates>-122.23230555555556,37.232305555555556,0.0</coordinates>
+            </Point>
+        </Placemark>
+        <Placemark id="60">
+            <name>BUT-2</name>
+            <description>Butano Ss</description>
+            <styleUrl>#44</styleUrl>
+            <Point id="59">
+                <coordinates>-122.235,37.1593,0.0</coordinates>
+            </Point>
+        </Placemark>
+        <Placemark id="62">
+            <name>BUT-1</name>
+            <description>Butano Ss</description>
+            <styleUrl>#44</styleUrl>
+            <Point id="61">
+                <coordinates>-122.1901388888889,37.14266666666666,0.0</coordinates>
+            </Point>
+        </Placemark>
+    </Document>
+</kml>

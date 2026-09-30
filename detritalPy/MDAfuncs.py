@@ -356,15 +356,31 @@ def YPP(ages, errors, min_cluster_size=2, thres=0.01, minDist=1, xdif=0.1):
         # Calculate peak indexes
         indexes = list(peakutils.indexes(PDP[i], thres=thres, min_dist=minDist))
         
-        # Refine peak positions using Gaussian interpolation
+        # Refine peak positions using Gaussian interpolation. A fit can
+        # converge to a value far outside the local fitting window, so only
+        # retain refinements that remain in the neighborhood of the peak.
+        interpolation_width = 10
         try:
-            refined_peak_ages = peakutils.interpolate(PDP_age, PDP[i], ind=np.array(indexes))
+            refined_peak_ages = peakutils.interpolate(
+                PDP_age,
+                PDP[i],
+                ind=np.array(indexes),
+                width=interpolation_width,
+            )
         except Exception:
             # Fall back to grid positions if interpolation fails
             refined_peak_ages = PDP_age[indexes]
 
         # Peak ages
         peakAges = PDP_age[indexes]
+        for j, peak_index in enumerate(indexes):
+            lower_index = max(0, peak_index - interpolation_width)
+            upper_index = min(len(PDP_age) - 1, peak_index + interpolation_width)
+            if not (
+                np.isfinite(refined_peak_ages[j])
+                and PDP_age[lower_index] <= refined_peak_ages[j] <= PDP_age[upper_index]
+            ):
+                refined_peak_ages[j] = peakAges[j]
         # Number of grains per peak
         peakAgeGrain = dFunc.peakAgesGrains([peakAges], [ages[i]], [errors[i]])[0]
         # Zip peak ages and grains per peak
