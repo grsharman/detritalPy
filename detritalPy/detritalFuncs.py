@@ -2649,11 +2649,11 @@ class MDS_class:
                 #    ax.set_aspect('equal')
             else:
                 if self.colorBy == 'Default':
-                    ax.plot(self.mArray[self.dim-self.min_dim][i][0],self.mArray[self.dim-self.min_dim][i][1],'o',label=self.sampleList[i],color=colorMe(i, self.colors))
+                    ax.plot(self.mArray[self.dim-self.min_dim][i][0],self.mArray[self.dim-self.min_dim][i][1],'o',label=self.sample_labels[i],color=colorMe(i, self.colors))
                     if plotLabels:
                         ax.text(self.mArray[self.dim-self.min_dim][i][0]+0.01,self.mArray[self.dim-self.min_dim][i][1]+0.01,self.labels[i])
                 else:
-                    ax.plot(self.mArray[self.dim-self.min_dim][i][0],self.mArray[self.dim-self.min_dim][i][1],'o',label=self.sampleList[i],color=dicts[self.df.loc[self.sampleList[i],self.colorBy]])
+                    ax.plot(self.mArray[self.dim-self.min_dim][i][0],self.mArray[self.dim-self.min_dim][i][1],'o',label=self.sample_labels[i],color=dicts[self.df.loc[self.sampleList[i],self.colorBy]])
                     if plotLabels:
                         ax.text(self.mArray[self.dim-self.min_dim][i][0]+0.01,self.mArray[self.dim-self.min_dim][i][1]+0.01,self.labels[i])
 
@@ -3604,7 +3604,7 @@ def KDEcalcAgesLocalAdapt(ages, x1=0, x2=4500, xdif=1, cumulative=False):
     -----
     """
     import detritalpy.adaptiveKDE as akde
-    #import adaptiveKDE as akde
+    # import adaptiveKDE as akde # For testing
 
     KDE_age = np.arange(0, 4500+xdif, xdif) # Ensures that the KDE is calculated over all of geologic time
     KDE = np.zeros(shape=(len(ages),len(KDE_age)))
@@ -3643,7 +3643,7 @@ def KDEcalcAgesGlobalAdapt(ages, x1=0, x2=4500, xdif=1, cumulative=False):
     -----
     """
     import detritalpy.adaptiveKDE as akde
-    #import adaptiveKDE as akde
+    # import adaptiveKDE as akde # For testing
 
     KDE_age = np.arange(0, 4500+xdif, xdif) # Ensures that the KDE is calculated over all of geologic time
     KDE = np.zeros(shape=(len(ages),len(KDE_age)))

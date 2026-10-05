@@ -561,7 +561,7 @@ def fftkernel(x, w):
     K = np.exp(-0.5 * (w * 2 * np.pi * f) ** 2)
 
     # convolve and transform back from frequency domain
-    y = np.real(np.fft.ifft(X * K, n))
+    y = np.real(np.fft.ifft(X * K, int(n)))
     y = y[0:L]
 
     return y
@@ -593,7 +593,7 @@ def fftkernelWin(x, w, WinFunc):
         K = np.exp(-0.5 * (w * 2 * np.pi * f)**2)
 
     # convolve and transform back from frequency domain
-    y = np.real(np.fft.ifft(X * K, n))
+    y = np.real(np.fft.ifft(X * K, int(n)))
     y = y[0:L]
 
     return y
