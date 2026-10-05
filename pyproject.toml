@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "detritalpy"
-version = "1.4.15"
+version = "1.4.16"
 
 description = "A Python-based toolset for visualizing and analyzing detrital geo-thermochronologic data"
 readme = "README.md"
